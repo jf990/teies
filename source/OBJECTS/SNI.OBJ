@@ -1,0 +1,61 @@
+; SNI OBJECT   -- System Names Index object definition.    JF 06-21-88
+;
+;
+SNI     ISV = 0                   TYPE = 47                PRIVS = 0
+;
+;
+SNI                               TYPE = HSEG
+{
+    LAST                          TYPE = INDEX
+    {
+         NAME                     TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    FIRST                         TYPE = INDEX
+    {
+         NAME                     TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    NIC                           TYPE = INDEX
+    {
+         NAME                     TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    PEN                           TYPE = INDEX
+    {
+         NAME                     TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    FULL                          TYPE = INDEX
+    {
+         NAME                     TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    SYSTEM                        TYPE = INDEX
+    {
+         ID                       TYPE = STR len=32             KEY
+         OID                      TYPE = OID
+    }
+    NAME                          TYPE = INDEX
+    {
+         NUMBER                   TYPE = STR len=4              KEY
+         OID                      TYPE = OID
+    }
+    OBJECT                        TYPE = INDEX
+    {
+         OID                      TYPE = OID                    KEY
+         FULLNAME                 TYPE = STR     LEN = 80
+         FIRSTNAME                TYPE = STR     LEN = 32
+         LASTNAME                 TYPE = STR     LEN = 32
+         SYSTEMID                 TYPE = STR     LEN = 32
+         PENNAME                  TYPE = STR     LEN = 32
+         NICKNAME                 TYPE = STR     LEN = 32
+         NUMBER                   TYPE = STR     LEN = 4
+     }
+     SYSTEM                       TYPE = SEG
+     {
+         TOTAL_USERS              TYPE = INT
+         NEXT_USER_ID             TYPE = INT
+     }
+}
+

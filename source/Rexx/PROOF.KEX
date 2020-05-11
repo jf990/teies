@@ -1,0 +1,122 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*|  :NAME.     FINDMODE XEDIT                                   |*/
+/*|                                                              |*/
+/*|  :LEVEL.                                                     |*/
+/*|                                                              |*/
+/*|  :GLOBAL.                                                    |*/
+/*|                                                              |*/
+/*|  :PARAM.    argstr        rexx_str    IN    argument list for|*/
+/*|                                              EPSPROOF--a file|*/
+/*|                                              descriptor will |*/
+/*|                                              suffice to have |*/
+/*|                                                              |*/
+/*|                                                              |*/
+/*|  :PURPOSE.  If given a filedescriptor, calls PROOF EXEC      |*/
+/*|             directly.  If no Fd is given, then the current   |*/
+/*|             file is saved under a different name, PROOF      |*/
+/*|             is called, and the origional file is replaced    |*/
+/*|             depending on changes made and a user inquiry.    |*/
+/*|                                                              |*/
+/*|                                                              |*/
+/*|  :OUTPUT.   Returns the exit RC from EPSPROOF.               |*/
+/*|                                                              |*/
+/*|  :CALLS.    FINDMODE EXEC, EPSPROOF MODULE, PROOF EXEC       |*/
+/*|                                                              |*/
+/*|  :ERRORS.                                                    |*/
+/*|                                                              |*/
+/*|  :LIMITS.                                                    |*/
+/*|                                                              |*/
+/*|  :MODS.    04_May_88   K.J.Walsh   Implemented.              |*/
+/*|                                                              |*/
+/*|  :END.                                                       |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+trace 'O'
+nok = 'COMMAND EMSG *** PROOF:  '
+parse upper arg fd
+
+if fd ^= '' then                          /* We are given an FD   */
+do
+   'EXEC PROOF' fd                        /* jest pass it along   */
+   exit rc
+end
+
+'COMMAND EXT/FN/LI/MSGM/SIZ/P */'         /* Get info             */
+fn = FNAME.1                              /* This filename        */
+line = LINE.1                             /* Current line in edit */
+msgm = MSGMODE.1                          /* Current msg mode set */
+size = SIZE.1
+
+'COMMAND PRES'
+'COMMAND SAVE' fn '$PROOF$ A'
+rcode = rc
+if rcode ^= 0 then                        /* Got an error?        */
+do
+   nok'Unable to SAVE',                   /* Yup--                */
+      '"'fn '$PROOF$ A" file, RC='rcode'.'/*   Tell and           */
+   exit rcode                             /*   quit               */
+end
+
+address command 'LISTFILE' fn '$PROOF$ A',/* Find the date on the */
+   '( LIFO NOH DATE'                      /* saved version to see */
+parse pull . . . . . . . date time        /* if it gets changed.  */
+
+'EXEC PROOF' fn '$PROOF$ A'               /* Do it!               */
+rcode = rc
+if rcode ^= 0 then                        /* Got an error?        */
+do
+   nok'Bad RC='rcode' from',              /* Yup--                */
+      'PROOF EXEC.  Updates remain in',   /*   Tell and           */
+      '"'fn '$PROOF$ A".'                 /*   quit               */
+   exit rcode
+end
+
+address command 'LISTFILE' fn '$PROOF$ A',/* Find the date on the */
+   '( LIFO NOH DATE'                      /* current version of   */
+parse pull . . . . . . . new_date new_time/* the file...          */
+
+if new_date = date & new_time = time then /* If no change made,   */
+   nok'No changes made in text.'          /* Tell the user        */
+else
+do                                        /* Changes *were* done  */
+   'COMMAND MSGM OFF'                     /* Hush up XEDIT        */
+   'COMMAND B'                            /* Go to bottom         */
+   'COMMAND GET = $PROOF$ A'              /* Get new version      */
+   rcode = rc
+   if rcode ^= 0 then                     /* Got an error?        */
+   do
+      nok'Error',                         /* Yup--                */
+      'COMMAND MSGM' msgm                 /*   reset msgmode      */
+         '(RC='rcode') occurred while',   /*   Tell               */
+         'reading in "'fn '$PROOF A"',
+         'version of file.'
+      call putpoints
+      exit rcode                          /*   quit               */
+   end
+   'COMMAND :1'                           /* To top               */
+   'COMMAND DEL' size                     /* Chop out origional   */
+   'COMMAND REST'                         /* Restore things.      */
+   call putpoints
+   'COMMAND :'line                        /* Go to old curline    */
+   'COMMAND MSGM' msgm                    /* reset msgmode        */
+   nok'PROOF changes are not',
+      'reflected in the disk version of',
+      'this file.'
+end
+address cms 'ERASE' fn '$PROOF$ A'        /* Discard extra version*/
+exit rc                                   /* Exit with that RC    */
+
+putpoints:
+   /*+-----------------------------------------------------------+*/
+   /*| Put points back, if any existed.                          |*/
+   /*+-----------------------------------------------------------+*/
+   do i = 1 to POINT.0                    /* For all points in it */
+      parse var POINT.i . pline names     /* Tease out info       */
+      'COMMAND :'pline                    /* Set to pointed line  */
+      do while names ^= ''                /* Might have more than */
+         parse var names name names       /* one name on line     */
+         'COMMAND P .'name                /* Set actual name      */
+      end
+   end
+   return

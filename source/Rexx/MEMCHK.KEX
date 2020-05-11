@@ -1,0 +1,74 @@
+/* extract only the memory ptr material, sort and process it to find
+   mismatches */
+
+'ALL ^/OS_MEMA/ & ^/OS_MEMD/'
+if rc = 0 then 'DEL *'
+'ALL'
+'TOP'
+'SORT * A 15 21'
+'TOP'
+'I temp line'
+'BOT'
+'I temp line'
+':2'
+
+do forever
+
+   'EXTRACT/CURLINE/LINE/RANGE'
+   if range.2 <= line.1 then leave
+
+   parse value curline.3 with . address .
+   '^/'address
+   if rc ^= 0 then do
+      say 'Target not found for address' address
+      leave;leave
+      end
+   starting_line = line.1
+   'EXTRACT/LINE'
+
+   result = (line.1 - starting_line) // 2
+   /* 1 says odd number of lines, 0 says even */
+
+
+   if result = 0 then do
+      /* most likely matching allocation and deallocations */
+      /* right here we are on a line past the one to delete */
+      /* we must move up to the stuff to del, del it, then move down */
+      'UP 1'
+      'DEL - ^/'address
+      if rc = 2 then do
+         say 'Delete Target not found for address' address
+         leave;leave
+         end
+      'DOWN 1'
+      end
+
+   end
+
+
+'BOT'
+'DEL -1'
+
+':1'
+'DEL 1'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

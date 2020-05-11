@@ -1,0 +1,18 @@
+PSI     type=37   isv=0
+;
+;   Principle System Index - this object definition cannot be changed
+;   without cause adverse affects on the TEIES object level.  There are
+;   routines hardcoded to this structure.
+;
+;
+PSI   type=HSEG
+{
+                INDEX                  type=INDEX
+                {
+                  SYS_ID                  type=STR  key
+                  TYPE                    type=HWRD
+                  OID                     type=OID
+                  LFD                     type=HWRD
+                  GOID                    type=INT
+                }
+}

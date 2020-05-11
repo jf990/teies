@@ -1,0 +1,19 @@
+if \ command() then do
+   'sos SaveCol'
+   'Text switch ( )'
+   'sos RestoreCol AddLine'
+   'Text {'
+   'sos AddLine AddLine CR CR SaveCol'
+   'Text case :'
+   'sos Addline RestoreCol CR CR CR'
+   'Text break ;'
+   'sos Addline Addline RestoreCol'
+   'Text default :'
+   'sos Addline RestoreCol CR CR CR'
+   'Text break ;'
+   'sos AddLine AddLine RestoreCol CL CL CL'
+   'Text }'
+   'sos RestoreCol CU CU CU CU CU CU CU CU CU CR CR CR CR CR'
+   'Set InsertMode On'
+end
+

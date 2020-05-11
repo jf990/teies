@@ -1,0 +1,11 @@
+if \ command() then do
+   'sos Addline MarginL'
+   'Text /*+---------------------------------------------------------------------+'
+   'sos Addline MarginL'
+   'Text   |                                                                     |'
+   'sos Addline MarginL'
+   'Text   +---------------------------------------------------------------------+*/'
+   'sos MarginL CU CR CR CR CR'
+   'Set InsertMode Off'
+end
+

@@ -1,0 +1,56 @@
+*
+* CC.Kex -- C Compile current KEdit file (if its type is .C
+*
+* March 14, 1991 by JF
+*
+* Runs a .BAT file called WinCl which is assumed to run a C compiler
+* and produce an error file .ERR where lines of significance contain
+* either 'error' or 'warning' and the associated lines number is in
+* parenthesis.  If neither of these conditions are met this macro assumes
+* no errors occured and erases the .ERR file.
+*
+* If an error message is determined then this macro makes its associated
+* line the current line, puts the cursor on that line, and sets the last
+* screen line with the error message.  If the macro determines there are
+* no errors (after successive runs) it will remove the reserved line.
+* Otherwise you must do it yourself (Set Reserved -1 OFF).
+*
+* Watch Out!! This marco performs a save on the file since the compiler
+* can only compile files on disk.
+
+'Save'
+'Extract /Fname/'
+'Extract /Ftype/'
+
+if Ftype.1 = "C" then do
+
+   'DOS Wincl ' Fname.1
+   'X 'Fname.1'.err'
+   'All /error/ | /warning/'
+   '-*'
+   'NoMsg Ch ./.\. * *'
+   '-* /(/ & /)/'
+   if rc = '17' | rc = '2' then do
+
+      'QQuit'
+      'DOSQuiet Erase 'Fname.1'.err'
+      End
+
+   Else do
+
+      'Extract /Curline/'
+      first = pos( '(', Curline.3 )
+      last  = pos( ')', Curline.3 )
+      ErrLine = substr( Curline.3, first + 1, last - first - 1 )
+      ErrFile = substr( Curline.3, 1, pos( '(', Curline.3 ) )
+      'QQuit'
+      'X 'ErrFile
+      ErrMsg = SubStr( Curline.3, Pos( '(', Curline.3 ) )
+      ErrMsg = SubStr( ErrMsg,    Pos( ':', ErrMsg ) + 1)
+      'EMsg 'ErrMsg
+      ':'ErrLine
+      'SOS Current'
+      End
+
+Exit 0
+

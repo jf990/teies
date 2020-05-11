@@ -1,0 +1,88 @@
+/*this profile is called to insert a category entry in the file*/
+TRACE 'off'
+'EXTRACT/LSCREEN/'
+call setup
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+     end
+'set shadow off'
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+numb=''
+do forever
+     numb=LEFT(numb,5)
+     t='                  SPECIFIC CODE NUMBER:'||nh||numb||pn
+     'SET RESERVED 'lscreen.1-5' BLUE NOH 't
+     'CURSOR SCREEN 'lscreen.1-5 41
+     call altset
+     datline=STRIP(result)
+     numb=datline
+     if datline='' then do
+               call setmenu
+               'all'
+               end
+     if (datline='quit') then return
+     if ((datatype(datline)='NUM') & length(datline)^=1) then do
+          'locate/('||datline'/'
+          if rc=0 then leave
+          else do
+                    e='invalid/nonexistant entry number'
+                    call procerror
+               end
+     end
+     else if datline^='' then do
+           e='invalid/nonexistant entry number'
+           call procerror
+           end
+end/*forever*/
+'extract/curline/'
+call setmenu
+'all/('||datline
+          text=''
+          e='give new text for entry 'datline
+          call procerror
+          call newsub
+          datline=strip(result)
+          if datline = 'quit' then return
+          text=datline
+          if (strip(word(curline.3,1)='y') |,
+           strip(word(curline.3,1)='n')) then
+          erline=word(curline.3,1)    '('||numb||')'     text
+          else
+          erline='('||numb||')'     text
+          call subinsert
+          e='the entry number 'numb' has been modified'
+          call procerror
+          return
+subinsert:
+          'set scope display'
+          'set display 0 1'
+          'set shadow on'
+          'set select 0'
+'top'
+'locate/('numb'/'
+'delete'
+'up'
+'input 'erline
+return
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

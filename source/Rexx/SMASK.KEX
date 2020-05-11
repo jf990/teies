@@ -1,0 +1,453 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     SMASK XEDIT                                       |*/
+/*|                                                              |*/
+/*| :LEVEL.    TOOL                                              |*/
+/*|                                                              |*/
+/*| :PARAM.    parm         REXX_str   IN    Indicates desired   |*/
+/*|                                          action--see '?'     |*/
+/*|                                                              |*/
+/*| :PURPOSE.  To assist in the standardized documentation of    |*/
+/*|            files by either setting the input mask or doing   |*/
+/*|            input to the current file.                        |*/
+/*|                                                              |*/
+/*| :OUTPUT.   Returns 0 if apparently OK, otherwise RC or 1.    |*/
+/*|                                                              |*/
+/*| :CALLS.    Only XEDIT                                        |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.                                                     |*/
+/*|                                                              |*/
+/*| :MODS.     12_May_88   K.J.Walsh   Implemented.              |*/
+/*|                                                              |*/
+/*| :MODS.     07_Jul_88   K.J.Walsh   Added MOD feature         |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+parse upper arg parm FTYPE.1 .
+if FTYPE.1 = '' then
+   'EXT/FTYPE'
+
+select
+   when parm = '?' then
+   do
+      say 'Use "BOX" to get a documentation header block inserted;'
+      say 'use "Block" to set mask for input to above block;'
+      say 'use "TERMINATOR" to input a line to close a box;'
+      say 'use "Code" to set mask for input alongside code.'
+      say 'use "MODs" to enter a new :MOD. line to header block.'
+      say 'use "IC" to insert a comment on current line.'
+      say 'use "RC" to replace a comment on current line.'
+   end
+
+   when parm = 'BOX' then
+   do
+      call putbox
+      disp('Box inserted.')
+   end
+
+   when parm = 'IC' then
+   do
+      parse arg . comment
+      'COMMAND EXTRACT/FTYPE'
+      if insert_comment() = 0 then
+         disp('Comment inserted.')
+   end
+
+   when parm = 'RC' then
+   do
+      parse arg . comment
+      'COMMAND EXTRACT/FTYPE'
+      if remove_comment() = 0 then
+      do
+         if comment = '' then
+            disp('Comment removed.')
+         else if insert_comment() = 0 then
+            disp('Comment replaced.')
+      end
+   end
+
+   when abbrev('MODS',parm,3) then
+   do
+      call putmod
+      disp('Mod inserted.')
+   end
+
+   when abbrev('BOX',parm,1) | abbrev('BLOCK',parm,1) then
+   do
+      putmask(masktype('B'))
+      disp('Now using Block/Box comments mask.')
+   end
+
+   when abbrev('CODE',parm,1) then
+   do
+      putmask(masktype('C'))
+      disp('Now using Code comments mask.')
+   end
+
+   when abbrev('TERMINATOR',parm,1) then
+   do
+      put(masktype('T'))
+      disp('Block/Box terminator inserted.')
+   end
+
+   when abbrev('NONE',parm,1) | parm = '' then
+   do
+      putmask()
+      disp('No longer using input mask.')
+   end
+
+   otherwise
+      disp('*** Use "BOX", "CODE", "TERM", "MOD", or "NONE"--"'args'"',
+         'not recognized.')
+      exit 1
+end
+exit 0
+
+masktype:
+   /*+-----------------------------------------------------------+*/
+   /*| Return the desired MASK (comment delimiter) string.       |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg type
+   type = type FTYPE.1                    /* Make composite type  */
+
+   select
+
+      /*+--------------------------------------------------------+*/
+      /*| REXX                                                   |*/
+      /*+--------------------------------------------------------+*/
+      when type = 'B EXEC' | type = 'B XEDIT' then
+         return '/*|'copies(' ',62)'|*/'
+
+      when type = 'C EXEC' | type = 'C XEDIT' then
+         return copies(' ',42)'/*'copies(' ',22)'*/'
+
+      when type = 'T EXEC' | type = 'T XEDIT' then
+         return '/*+'copies('-',62)'+*/'
+
+      /*+--------------------------------------------------------+*/
+      /*| MAKE                                                   |*/
+      /*+--------------------------------------------------------+*/
+      when type = 'B MAKE' then
+         return '#'copies(' ',62)'#'
+
+      when type = 'C MAKE' then
+         nop                              /* Not defined          */
+
+      when type = 'T MAKE' then
+         return copies('#',64)
+
+      /*+--------------------------------------------------------+*/
+      /*| C                                                      |*/
+      /*+--------------------------------------------------------+*/
+      when type = 'B C' | type = 'B H' then
+         return '/*|'copies(' ',67)'|*/'
+
+      when type = 'C C' | type = 'C H' then
+         return copies(' ',39)'/*'copies(' ',30)'*/'
+
+      when type = 'T C' | type = 'T H' then
+         return '/*+'copies('-',67)'+*/'
+
+      /*+--------------------------------------------------------+*/
+      /*| Not available                                          |*/
+      /*+--------------------------------------------------------+*/
+      otherwise
+         call nogots
+    end
+
+
+putmod:
+   /*+-----------------------------------------------------------+*/
+   /*| Put a :MOD. tag into a documentation header block.        |*/
+   /*+-----------------------------------------------------------+*/
+
+   select
+
+      /*+--------------------------------------------------------+*/
+      /*| REXX                                                   |*/
+      /*+--------------------------------------------------------+*/
+      when FTYPE.1 = 'EXEC' | FTYPE.1 = 'XEDIT' then
+      do
+         leftpart = '/*|'                  /* Left of box string   */
+         ritepart = '|*/'                  /* Right of box string  */
+         width = 65                        /* Box width - 3        */
+      end
+
+      /*+--------------------------------------------------------+*/
+      /*| C                                                      |*/
+      /*+--------------------------------------------------------+*/
+      when FTYPE.1 = 'C' | FTYPE.1 = 'H' then
+      do
+         leftpart = '/*|'                  /* Left of box string   */
+         ritepart = '|*/'                  /* Right of box string  */
+         width = 70                        /* Box width - 3        */
+      end
+
+      otherwise
+      /*+--------------------------------------------------------+*/
+      /*| Not available                                          |*/
+      /*+--------------------------------------------------------+*/
+         call nogots
+         return
+   end
+   /*+-----------------------------------------------------------+*/
+   /*| Now we either figgured it out or have returned.  Find     |*/
+   /*| where it goes and put it if possible.                     |*/
+   /*+-----------------------------------------------------------+*/
+   'COMMAND EXTRACT/LINE/'
+   'COMMAND TOP'
+   'COMMAND LOCATE/:END./'
+   if rc ^= 0 then
+   do
+      ':'LINE.1
+      call nogots
+   end
+   'COMMAND UP'
+   put(properly(modline(nowdate() 'Modified.')))
+   put(masktype('B'))
+
+   return
+
+putbox:
+   /*+-----------------------------------------------------------+*/
+   /*| Put a documentation header block into text at curpos      |*/
+   /*+-----------------------------------------------------------+*/
+   select
+
+      /*+--------------------------------------------------------+*/
+      /*| REXX                                                   |*/
+      /*+--------------------------------------------------------+*/
+      when FTYPE.1 = 'EXEC' | FTYPE.1 = 'XEDIT' then
+      do
+         leftpart = '/*|'                  /* Left of box string   */
+         ritepart = '|*/'                  /* Right of box string  */
+         width = 65                        /* Box width - 3        */
+
+         parmline = left('name',12),       /* :PARM. data          */
+            left('REXX_str',10),
+            left('IN',5),
+            'comment'
+                                          /* :GLOBAL. data         */
+         globline = left('sel(name)',12),
+            left('REXX_str',10),
+            left('IN',5),
+            'comment'
+
+         call usualbox
+      end
+
+      /*+--------------------------------------------------------+*/
+      /*| C                                                      |*/
+      /*+--------------------------------------------------------+*/
+      when FTYPE.1 = 'C' | FTYPE.1 = 'H' then
+      do
+         leftpart = '/*|'                  /* Left of box string   */
+         ritepart = '|*/'                  /* Right of box string  */
+         width = 70                        /* Box width - 3        */
+
+         parmline = left('name',10),       /* :PARM. data          */
+            left('type',10),
+            left('IN',4),
+            'comment'
+                                          /* :GLOBAL. data         */
+         globline = parmline
+
+         call usualbox
+      end
+
+      otherwise
+      /*+--------------------------------------------------------+*/
+      /*| Not available                                          |*/
+      /*+--------------------------------------------------------+*/
+         call nogots
+   end
+   return
+
+insert_comment:
+   /*+-----------------------------------------------------------+*/
+   /*| Put 'comment' into the current line if possible.          |*/
+   /*+-----------------------------------------------------------+*/
+   mask = masktype('C')
+   'COMMAND EXTRACT/CURLINE'
+   source = strip(CURLINE.3,'T')
+   source_length = length(source)
+   comment_start = verify(mask,' ') - 1
+   if source_length > comment_start then
+   do
+      disp('No room for comment.')
+      exit 1
+   end
+   parse var mask mask_start mask_end .
+   comment_length = length(mask) - length(mask_end)
+   out_line = left(CURLINE.3,comment_start)||mask_start comment
+   if length(out_line) > comment_length then
+      disp('Comment truncated and inserted.')
+   else
+      disp('Comment inserted.')
+   out_line = left(out_line,comment_length)||mask_end
+   'COMMAND INPUT' out_line
+   'COMMAND UP 1'
+   'COMMAND DELETE 1'
+   'COMMAND DOWN 1'
+   exit rc
+
+nogots:
+   /*+-----------------------------------------------------------+*/
+   /*| Were asked for something undefined--tell & die.           |*/
+   /*+-----------------------------------------------------------+*/
+   disp('*** Sorry, not defined for',
+      'filetype "'strip(FTYPE.1)'".')
+   exit 1
+
+properly:
+   /*+-----------------------------------------------------------+*/
+   /*| Appends argument to "leftpart", left justified in "width" |*/
+   /*| with suffix "ritepart".  If argument has more than one    |*/
+   /*| word, treat as a tag.                                     |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg tag info
+   return left(leftpart left(tag,10) info,width)ritepart
+
+put:
+   /*+-----------------------------------------------------------+*/
+   /*| Input given line into the file.                           |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg putstr
+   return 'COMMAND I' putstr
+
+disp:
+   /*+-----------------------------------------------------------+*/
+   /*| Put out a message.                                        |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg message
+   return 'COMMAND EMSG' message
+
+putmask:
+   /*+-----------------------------------------------------------+*/
+   /*| Set the input mask to the given string (even if null).    |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg newmask
+   return 'COMMAND MASK I' newmask
+
+name:
+   /*+-----------------------------------------------------------+*/
+   /*| Return filename filetype pair for source being edited:    |*/
+   /*+-----------------------------------------------------------+*/
+   'EXT/FN/'
+   return strip(FNAME.1) strip(FTYPE.1)
+
+modline:
+   /*+-----------------------------------------------------------+*/
+   /*| Return :MOD. dataline (name, date, etc)                   |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg date modcomment
+   return ':MODS.' date'   K.J.Walsh   'modcomment
+
+remove_comment:
+   /*+-----------------------------------------------------------+*/
+   /*| Remove the comment on the current line.                   |*/
+   /*+-----------------------------------------------------------+*/
+   mask = masktype('C')
+   arbs = '|@#$%^&*()_+!|}":?.,/;''{\\=-`'
+   'COMMAND EXTRACT/ARBCHAR/MSGMODE'
+   if ARBCHAR.1 = 'OFF' then              /* If ARB OFF, set ON   */
+      arb_off = 1
+   else
+      arb_off = 0
+   if verify(ARBCHAR.2,mask,'M') > 0 then /* ARBCHAR is in mask   */
+   do
+      newarb_at = verify(arbs,mask)        /* Find an OK ARBCHAR   */
+      if newarb_at = 0 then
+      do
+         disp('Cannot decide on an ARBCHAR symbol.')
+         exit 1
+      end
+      else
+         newarb = substr(arbs,newarb_at,1)
+   end
+   else
+      newarb = ARBCHAR.2
+   cc_at = verify(arbs,mask||newarb)
+   if cc_at = 0 then
+   do
+      disp('Cannot decide on a CHANGE symbol.'
+      exit 1
+   end
+   cc = substr(arbs,cc_at,1)
+   if arb_off | newarb /= ARBCHAR.2 then  /* If needed,           */
+      'COMMAND SET ARBCHAR ON' newarb     /* ...turn on ARBCHAR   */
+   parse var mask mask_start mask_end .
+   'COMMAND SET MSGMODE OFF'
+   'COMMAND CHANGE 'cc||mask_start||newarb||mask_end||CC||CC'1 1'
+   change_rc = rc
+   'COMMAND SET MSGMODE ON LONG'
+   'COMMAND EXTRACT/LASTMSG'
+   if MSGMODE.1 /= 'ON' & MSGMODE.2 /= 'LONG' then
+      'COMMAND SET MSGMODE' MSGMODE.1 MSGMODE.2
+   if arb_off | newarb /= ARBCHAR.2 then
+      'COMMAND SET ARBCHAR' ARBCHAR.1 ARBCHAR.2
+   if change_rc /= 0 then
+      disp('Can''t remove comment:  'LASTMSG.1)
+   return change_rc
+
+usualbox:
+   /*+-----------------------------------------------------------+*/
+   /*| Same box for REXX and C--slight differences.              |*/
+   /*+-----------------------------------------------------------+*/
+      put(masktype('T'))
+      put(masktype('B'))
+      put(properly(':NAME.' name()))
+      put(masktype('B'))
+      put(properly(':LEVEL. level'))
+      put(masktype('B'))
+      put(properly(':GLOBAL.' globline))
+      put(masktype('B'))
+      put(properly(':PARAM.' parmline))
+      put(masktype('B'))
+      put(properly(':PURPOSE. purpose'))
+      put(masktype('B'))
+      put(properly(':OUTPUT. output'))
+      put(masktype('B'))
+      put(properly(':CALLS. calls'))
+      put(masktype('B'))
+      put(properly(':ERRORS.'))
+      put(masktype('B'))
+      put(properly(':LIMITS.'))
+      put(masktype('B'))
+      put(properly(modline(filedate() 'Implemented.')))
+      put(masktype('B'))
+      put(properly(':END.'))
+      put(masktype('B'))
+      put(masktype('T'))
+      return
+
+nowdate:
+   /*+-----------------------------------------------------------+*/
+   /*| Returns current date in format dd_mon_yy                  |*/
+   /*+-----------------------------------------------------------+*/
+   parse value date('O') with year'/'.'/'day .
+   return(day'_'substr(date('M'),1,3)'_'year)
+
+filedate:
+   /*+-----------------------------------------------------------+*/
+   /*| Returns date of file being worked on in format dd_mon_yy  |*/
+   /*| or, if the files does not exist, "nowdate()"              |*/
+   /*+-----------------------------------------------------------+*/
+   address command
+   'MAKEBUF'
+   'LISTFILE' FNAME.1 FTYPE.1 '* ( DATE NOH FIFO'
+   if rc = 0 then
+   do
+      parse pull . . . . . . . filemonth'/'fileday'/'fileyear .
+      filemonth = subword('Jan Feb Mar Apr May Jun Jul Aug Sep',
+         'Oct Nov Dec',filemonth,1)
+      date = right(fileday,2,'0')'_'filemonth'_'right(fileyear,2,'0')
+   end
+   else
+      date = nowdate()
+
+   'DROPBUF'
+   return date

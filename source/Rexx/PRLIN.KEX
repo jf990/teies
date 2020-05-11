@@ -1,0 +1,20 @@
+/*this module prints the specified no of lines from the file*/
+trace off
+address cms 'globalv stack option'
+parse pull option
+address cms 'globalv stack  fname'
+parse pull fname
+address cms 'globalv stack  ftype'
+parse pull ftype
+address cms 'globalv stack  fmode'
+parse pull fmode
+address cms 'globalv stack  frec'
+parse pull frec
+address cms 'globalv stack  lrec'
+parse pull lrec
+'get 'fname ftype fmode frec lrec
+'ssave 'fname temp a
+if option='' then do
+address cms 'pr 'fname temp a
+'quit'
+end

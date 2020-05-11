@@ -1,0 +1,11 @@
+/*this routine calls subcrac xedit to insert an entry in the subsystem file*/
+'extract/lscreen/'
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+     end
+address cms 'globalv set flag 1'
+call subcrac xedit a
+'save ss$file data a'
+'quit'

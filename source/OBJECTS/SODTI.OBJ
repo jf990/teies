@@ -1,0 +1,17 @@
+SODTI              type=44     isv=0
+;
+;
+;           System Object Definition Table Index             JF 06-23-88
+;
+;
+            INDEX               type=SEG
+            {
+              NAME                            type=STR  len=12
+              LEVEL                           type=BYTE
+              OFFSET                          type=HWRD
+              OFFNXT                          type=HWRD
+              OFFPRV                          type=HWRD
+              TYPE                            type=HWRD
+              PRIVS                           type=PRIV
+              RULES                           type=STR  len=64
+            }

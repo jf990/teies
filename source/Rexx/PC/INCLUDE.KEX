@@ -1,0 +1,6 @@
+* KEXX macro to Get the tmp.tmp file and erase it when done.
+
+'Get tmp.tmp'
+'Dos Del tmp.tmp'
+Exit
+

@@ -1,0 +1,15 @@
+SKI          type=40         isv=0
+;
+;
+;            System Keyword Index                          JF 06-23-88
+;
+;
+             SKI                type=HSEG
+             {
+                INDEX                       type=INDEX
+                {
+                  KEY                         type=STR   key   len=32 key
+                  OID                         type=OID
+                  STATUS                      type=INT
+                }
+              }

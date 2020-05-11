@@ -1,0 +1,16 @@
+'Top'
+'/BkUpDate'
+If rc = 0 then do
+
+   'Del'
+   'I Set BkUpDate=11/05/91'
+   End
+
+else do
+
+   'Bottom'
+   'I Set BkUpDate=11/05/91'
+   End
+
+'File'
+Exit 0

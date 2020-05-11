@@ -1,0 +1,16 @@
+*
+* QQQ.kex  --  Quick Quit from Kedit
+*
+* by JF on March 13, 1991
+*
+* Cancel all files with no changes pending, then FILE all files with
+* outstanding edits.
+*
+
+'Cancel'
+'Extract /RING/'
+Do Ring.0
+
+   'File'
+   End
+

@@ -1,0 +1,32 @@
+/*this subroutine is used to get the text*/
+'extract/lscreen/'
+call setup
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+     do forever
+          text=''
+          text=LEFT(text,80)
+          t='       TEXT:'||nh||text||pn
+          'set reserved 'lscreen.1-4' blue noh 't
+          'cursor screen 'lscreen.1-4 14
+          call altset
+          datline=strip(result)
+          if datline ='quit' then return datline
+          if LENGTH(datline)>2 then do
+                              'set reserved 'lscreen.1-4' blue noh'
+                              leave
+                              end
+          else do
+               e='text too short'
+               call procerror
+               end
+     end/*of text forever*/
+return datline
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

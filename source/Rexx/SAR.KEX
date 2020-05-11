@@ -1,0 +1,235 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*|  :NAME. SAR.XEDIT                                            |*/
+/*|                                                              |*/
+/*|  :LEVEL.                                                     |*/
+/*|                                                              |*/
+/*|  :GLOBAL.                                                    |*/
+/*|                                                              |*/
+/*|  :PARAM.    passed  rexx-str    IN    parameter list to pass |*/
+/*|                                       to routine.            |*/
+/*|                                                              |*/
+/*|  :PURPOSE.  Save                                             |*/
+/*|             And                                              |*/
+/*|             Run:  (SAR), saves (if needed) and runs the      |*/
+/*|                   current file.  "runs" can also include     |*/
+/*|                   compile/assemble/load/genmod as needed.    |*/
+/*|                                                              |*/
+/*|  :OUTPUT.                                                    |*/
+/*|                                                              |*/
+/*|  :CALLS.                                                     |*/
+/*|                                                              |*/
+/*|  :ERRORS.                                                    |*/
+/*|                                                              |*/
+/*|  :LIMITS.                                                    |*/
+/*|                                                              |*/
+/*|  :MODS.    06_Aug_86   K.J.Walsh   Implimented on or before. |*/
+/*|  :MODS.    14_Feb_88   K.J.Walsh   Documented to 1.42; added |*/
+/*|                                    ftype "C" and better      |*/
+/*|                                    error return codes.       |*/
+/*|                                                              |*/
+/*|  :END.                                                       |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+was_queued = queued()
+parse arg passed
+address xedit
+'EXTRACT/FNAME/FTYPE/FMODE/ALT/'
+ftype.1 = strip(ftype.1,'T')
+
+loaded = 0
+
+/*+--------------------------------------------------------------+*/
+/*| Did we get right fileTYPE?                                   |*/
+/*+--------------------------------------------------------------+*/
+if pos(' 'ftype.1' ',' MAKE XEDIT EXEC ASSEMBLE C ') = 0 then
+do
+   "MSG *** Not of an expected type.  Didn't bother to save it. ***"
+    call exit  1
+end
+
+/*+--------------------------------------------------------------+*/
+/*| OK, save the file if it has been altered recently:           |*/
+/*+--------------------------------------------------------------+*/
+if alt.2 ^= 0 then
+do
+   'SAVE'
+   rcode = rc
+   if rcode ^= 0 then
+      call exit rcode
+end
+
+/*+--------------------------------------------------------------+*/
+/*| Don't allow SAR to be used on SAR.XEDIT--trashes XEDIT!      |*/
+/*+--------------------------------------------------------------+*/
+if fname.1 = 'SAR' & ftype.1 = 'XEDIT' then
+do
+   'MSG *** If you try to run SAR on SAR you''l bomb out XEDIT! ***'
+   call exit  1
+end
+
+/*+--------------------------------------------------------------+*/
+/*| Now the actual running is done.                              |*/
+/*+--------------------------------------------------------------+*/
+select
+   when ftype.1 = 'EXEC' then
+   do
+      signal on SYNTAX
+      signal on HALT
+      signal on NOVALUE
+
+      address cms 'EXECLOAD 'fname.1' 'ftype.1' 'fmode.1
+      loaded = 1 /* If it bombs out we want to rememer to EXECDROP */
+
+      call line('=')
+      address cms 'EXEC' fname.1 passed ; rcode = rc
+      call line('=')
+
+      address cms 'EXECDROP 'fname.1
+
+      call exit rcode
+
+   end
+/*+--------------------------------------------------------------+*/
+   when ftype.1 = 'XEDIT' then
+   do
+      signal on SYNTAX
+      signal on HALT
+      signal on NOVALUE
+
+      address cms 'EXECLOAD 'fname.1' 'ftype.1' 'fmode.1
+      loaded = 1 /* If it bombs out we want to rememer to EXECDROP */
+
+      call line('=')
+      address xedit ''fname.1 passed ; rcode = rc
+      call line('=')
+
+      address cms 'EXECDROP 'fname.1
+
+      call exit rcode
+
+   end
+/*+--------------------------------------------------------------+*/
+   when ftype.1 = 'ASSEMBLE' then
+   do
+      call line('=')
+      call step('ASSEMBLE 'fname.1)
+      call step('LOAD 'fname.1' ( CLEAR')
+      call step('GENMOD 'fname.1)
+
+      call line('-')
+      ''fname.1 passed ; rcode = rc
+      call line('=')
+
+      call exit rcode
+   end
+/*+--------------------------------------------------------------+*/
+   when ftype.1 = 'C' then
+   do
+      call line('=')
+      call step('EXEC CC 'fname.1' 'ftype.1' 'fmode.1' ( N')
+      call step('LOAD 'fname.1' ( CLEAR')
+      call step('GENMOD 'fname.1)
+
+      call line('-')
+      ''fname.1 passed ; rcode = rc
+      call line('=')
+
+      call exit rcode
+   end
+/*+--------------------------------------------------------------+*/
+   when ftype.1 = 'MAKE' then
+   do
+      call line('=')
+      'EXEC MAKE -f "'fname.1 ftype.1 fmode.1'"' passed
+      rcode = rc
+      call line('=')
+
+      call exit rcode
+   end
+/*+--------------------------------------------------------------+*/
+
+   otherwise
+   do
+      'MSG *** FTYPE.1 = "'ftype.1'"? ***'
+      call exit 1
+   end
+end
+
+/*+--------------------------------------------------------------+*/
+/*| The above select/when/otherwise always does an exit.  The    |*/
+/*| following is "just in case"                                  |*/
+/*+--------------------------------------------------------------+*/
+
+call exit -99
+
+/*+--------------------------------------------------------------+*/
+/*| Some subroutines:                                            |*/
+/*+--------------------------------------------------------------+*/
+
+step:
+   parse arg todo
+   say todo
+   address cms todo
+   rcode = rc
+   if rcode ^= 0 then
+   do
+      say '*** RCODE='rcode'. ***'
+      call exit rcode
+   end
+   return 0
+
+line:
+   parse arg char
+   say left(char,80,char)
+   return
+
+exit:
+   parse arg rcode
+   if rcode = '' then
+      rcode = 0
+   signal UNSTACK
+
+ERROR:
+    rcode = rc
+    say 'SIGNAL ERROR:  'errortext(rcode)
+    sigline  = sigl
+    sigspace = 7
+    signal BYEBYE
+NOVALUE:
+    rcode = rc
+    say 'SIGNAL NOVALUE:  'errortext(rcode)
+    sigline  = sigl
+    sigspace = 7
+    signal BYEBYE
+SYNTAX:
+    rcode = rc
+    say 'SIGNAL SYNTAX:  'errortext(rcode)
+    sigline  = sigl
+    sigspace = 7
+    signal BYEBYE
+HALT:
+    rcode = rc
+    say 'SIGNAL HALT:'
+    sigline  = sigl
+    sigspace = 6
+    say 'LINE 'right(sigline,6)':  'sourceline(sigline)
+BYEBYE:
+    if sigline = 'SIGLINE' then do
+        say 'SIGNAL BYEBYE:'
+        sigline  = sigl
+        sigspace = 8
+    end
+    say 'LINE 'right(sigline,sigspace)':  'strip(sourceline(sigline),'B')
+    if loaded then
+      address cms 'execdrop 'fname.1
+UNSTACK:
+    stacked = queued() - was_queued
+    do i = 0 to stacked-1
+      pull line
+      say 'STACKED AT DEPTH 'i':  "'line'"'
+    end
+    if rcode = 0 then
+      exit 0
+    address xedit 'EMSG *** RC='rcode'. ***'
+    exit(rcode)     /*from error:*/

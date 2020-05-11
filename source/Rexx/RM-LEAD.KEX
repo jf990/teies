@@ -1,0 +1,5 @@
+/* one of those one time xedits to strip leading blanks on cur line */
+'EXTRACT/CURLINE'
+new_line = strip(curline.3,l)
+'REPLACE' new_line
+exit 0

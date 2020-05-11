@@ -1,0 +1,51 @@
+/* DIFF file in XEDIT buffer                                           */
+/*  no parms:  diff current XEDIT file against original disk file      */
+/*  one file specifier:  diff current XEDIT file against given file    */
+/*  two file specifiers:  diff first against second file, with XEDIT on*/
+/*                                                                     */
+/*  Modified 07-24-89 from Waterloo version so FName/FType can be      */
+/*  changed from SET.                                                  */
+
+
+parse arg files '(' parms
+
+"command point .z1234" /* remember current line */
+
+
+'COMMAND EXTRACT /FNAME/FTYPE/FMODE/'
+
+secondfile = fname.1 ftype.1 substr( fmode.1, 1, 2 )
+
+if files = '' then do  /* compare current file against disk version */
+    firstfile = secondfile
+    secondfile = '= = ='
+  end
+else do /* parse supplied file names */
+    parse var files first.0 first.1 first.2 files
+
+    if first.2 = '' then
+        first.2 = '*'
+    if first.0 = '=' then
+        first.0 = fname.1
+    if first.1  = '=' then
+        first.1 = ftype.1
+    if first.2 = '=' then
+        first.2 = substr( fmode.1, 1, 2 )
+
+    firstfile = first.0 first.1 first.2
+    upper firstfile
+    if files ^= '' then do  /* compare firstfile to secondfile */
+        parse var files second.0 second.1 second.2 rest
+        if second.2 = '' then
+            second.2 = '*'
+        secondfile = second.0 second.1 second.2
+        upper secondfile
+      end
+  end
+
+address command 'DIFF' firstfile secondfile ' ( XEDIT ' parms
+rcode = rc
+
+"command .z1234"
+"command point .z1234 off"
+exit rcode

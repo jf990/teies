@@ -1,0 +1,11 @@
+NETDIR  type=3         isv=13
+;
+;
+;            Network Directory Object                    JF 06-23-88
+;
+;
+       NETDIR                        type=HSEG
+       {
+         USER_ID                               type=STR  len=80
+         NODE                                  type=STR  len=80
+       }

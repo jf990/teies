@@ -1,0 +1,108 @@
+/*this profile is called to delete a subsystem entry in the file*/
+TRACE 'OFF'
+'EXTRACT/LSCREEN/'
+call setup
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+address cms 'globalv stack catvar'
+parse pull catvar
+address cms 'globalv stack subvar'
+parse pull subvar
+          i=1
+          DO LSCREEN.1-2
+               'set reserved 'i' blue noh'
+               i=i+1
+          end
+numb=''
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+do forever
+     numb=LEFT(numb,6)
+     if subvar then
+     t='              SPECIFIC SUBSYSTEM NUMBER:'||nh||numb||pn
+     else
+     t='               SPECIFIC CATEGORY NUMBER:'||nh||numb||pn
+     'SET RESERVED 'lscreen.1-5' BLUE NOH 't
+     'CURSOR SCREEN 'lscreen.1-5 42
+     call altset
+     datline=STRIP(result)
+     numb=datline
+     if datline='' then do
+                    call setmenu
+                    'all'
+                    end
+     if (datline='quit') then do
+          address cms 'globalv set delsub 0'
+          if subvar then
+          call save ss$file data a
+          else call save sc$file data a
+          leave
+          end
+     if ((datatype(datline)='NUM') & (length(datline)=2),
+      & (subvar=1)) | ((datatype(datline)='NUM') & (length(datline)=3)               & (catvar=1)) then do
+          ecode=strip(datline)
+          leave
+          end
+     else if datline^='' then do
+      e='invalid  number'
+     call procerror
+     end
+end/*of forever*/
+if datline='quit' then do
+                    'quit'
+                    exit
+end
+call setmenu
+'all/('||ecode'/'
+if rc^=0 then do
+     address cms 'globalv set delsub 0'
+     e='this code is non existant already'
+     call procerror
+     'quit'
+     exit
+     end
+'set shadow off'
+'top'
+'locate/('||ecode'/'
+t='Is it ok to delete this entry(y/n):'||nh||numb||pn
+'set reserved 'lscreen.1-5' blue high 't
+'cursor screen 'lscreen.1-5 37
+call altset
+if strip(result)='y' then do
+          'delete'
+          address cms 'globalv set delsub 'ecode
+          if subvar then
+          call save ss$file data a
+          else call save sc$file data a
+          'quit'
+          exit
+          end
+else do
+          address cms 'globalv set delsub 0'
+          'quit'
+          exit
+     end
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+save:
+     arg file
+     'save 'file
+     'extract/range/'
+     if range.2 = 0 then
+         address cms 'erase 'file
+return

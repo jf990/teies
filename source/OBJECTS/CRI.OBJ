@@ -1,0 +1,24 @@
+CRI       type=43    isv=0
+;
+;   Index of Conferences by conference ID and/or Label
+;
+;
+;
+           CRI    type=HSEG
+           {
+              ID                      type=INDEX
+              {
+                 CONF_ID                     type=STR len=32 KEY
+                 CONF_ROOT                   type=OID
+              }
+              LABEL                   type=INDEX
+              {
+                 CONF_LABEL                  type=STR len=32 key
+                 CONF_ROOT                   type=OID
+              }
+              SYSTEM                  type=SEG
+              {
+                 TOTAL_CR                    type=INT
+                 NEXT_CR_ID                  type=INT
+              }
+           }

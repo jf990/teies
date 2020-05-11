@@ -1,0 +1,134 @@
+/*THIS IS THE ROUTINE WHICH DISPLAYS THE REQUIRED INFORMATION*/
+TRACE 'OFF'
+'EXTRACT /LSCREEN/'
+ARG B1, M1.1,M1.2,M1.3, T1, OPTION
+B1=STRIP(B1)
+M1.1=STRIP(M1.1);M1.2=STRIP(M1.2);M1.3=STRIP(M1.3)
+T1=STRIP(T1)
+'SET SHADOW OFF'
+CALL SETMENU1
+'SET MSGMODE OFF'
+'SET ARBCHAR ON \'
+'SET CASE M I'
+IF B1='' & M1.1='' & M1.2='' & M1.3='' & T1='' THEN 'ALL'
+ELSE
+DO
+IF OPTION='AND' THEN DO
+    IF B1 = '' THEN
+         TARGET = '/\|'
+    ELSE
+         TARGET = '/ '||B1||' \|'
+    IF M1.1 = '' THEN
+         TARGET = TARGET||'\-'
+    ELSE
+         TARGET = TARGET||'\'||M1.1||'\-'
+    IF M1.2 = '' THEN
+         TARGET = TARGET||'\-'
+    ELSE
+         TARGET = TARGET||'\'||M1.2||'\-'
+    IF M1.3 = '' THEN
+         TARGET = TARGET||'\|'
+    ELSE
+         TARGET = TARGET||'\'||M1.3||'\|'
+    IF T1 = '' THEN
+         TARGET = TARGET||'/'
+    ELSE
+         TARGET = TARGET||'\'||T1||'/'
+    'ALL' TARGET
+END
+ELSE IF OPTION= 'OR ' THEN DO
+          TARGET=''
+          APPEND = 0
+          IF B1^='' THEN DO
+               TARGET='/ '||B1||' \|\|/'
+               APPEND = 1
+          END
+          IF M1.1 ^='' THEN DO
+              IF APPEND THEN
+                   TARGET = TARGET||' | '
+              APPEND = 1
+              TARGET=TARGET||'/\|\'||M1.1||'\-\-\|\/'
+          END
+          IF M1.2 ^='' THEN DO
+              IF APPEND THEN
+                   TARGET = TARGET||' | '
+              APPEND = 1
+              TARGET=TARGET||'/\|\-\'||M1.2||'\-\|\/'
+          END
+          IF M1.3 ^='' THEN DO
+              IF APPEND THEN
+                   TARGET = TARGET||' | '
+              APPEND = 1
+              TARGET=TARGET||'/\|\-\-\'||M1.3||'\|\/'
+          END
+          IF T1 ^='' THEN DO
+              IF APPEND THEN
+                   TARGET = TARGET||' | '
+                    TARGET=TARGET||'/\|\|\'||T1'/'
+          END
+          'ALL'TARGET
+      END
+ELSE DO
+     'SET MSGMODE ON LONG'
+    EMSG 'INVALID SEARCH TYPE "'OPTION'" REJECTED.'
+     'set msgm off'
+    RETURN
+END/* OF "OPTION" IFS */
+END
+               IF RC=2 THEN DO
+                         'SET MSGMODE ON LONG'
+                        M = 'Entry not found'
+                        TARGET = '"'TARGET'"'
+                        size = LSCREEN.2 - length(TARGET) - 2
+                        M = left(M,SIZE,' ')
+                        EMSG M||TARGET
+                         'set msgm off'
+                          RETURN
+                          END
+DO FOREVER
+IF PFKEY1^='' THEN 'CURSOR CMDLINE'
+PFKEY1=''
+'READ ALL TAG'
+      PULL SLINE1
+     KEYDEF=WORD(SLINE1,1)
+     IF KEYDEF='PFK'THEN DO
+                         PFKEY=WORD(SLINE1,2)
+                         IF PFKEY > 12 THEN PFKEY=PFKEY-12;ELSE NOP
+                         PF='PF'||PFKEY
+                         IF PF='PF3' THEN LEAVE
+                         ELSE INTERPRET 'CALL 'PF
+                         END
+END /*OF FOREVER*/
+'SET SCOPE DISPLAY'
+'SET DISPLAY 0 1'
+'SET SHADOW ON'
+'SET SELECT 0'
+RETURN
+PF1:
+PF2:
+PF4:
+PF5:
+PF6:
+PF9:
+PF10:
+PF11:
+PF12:E='These keys are not valid when displaying records'
+     'SET MSGMODE ON LONG'
+     'EMSG 'E
+     'SET MSGMODE OFF'
+     RETURN
+PF7:
+    'BACKWARD'
+    RETURN
+PF8:
+   'FORWARD'
+   RETURN
+SETMENU1:
+I=2
+DO LSCREEN.1-6
+     'SET RESERVED 'I' OFF'
+     I=I+1
+END
+T='BINDER_NO     MANUAL_NO       TITLE'
+'SET RESERVED 2 BLUE HIGH 'T
+RETURN

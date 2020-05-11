@@ -1,0 +1,21 @@
+SHI     type=46      isv=0
+;
+;
+;                 TEIES System Help Index             JF 09-06-89
+;                 See HELP interface specs for definitions of the
+;                 components.
+;
+     SHI     type=HSEG
+     {
+          INDEX          type=INDEX
+          {
+              KEYWORD                            type=STR len=32 KEY
+              SYNONYM                            type=STR len=32
+              HELPID                             type=STR len=8
+              OID                                type=OID
+              OCD                                type=STR len=32
+              STATUS                             type=INT
+              TYPE                               type=INT
+              FLAGS                              type=INT
+          }
+     }

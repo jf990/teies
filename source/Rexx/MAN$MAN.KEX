@@ -1,0 +1,312 @@
+/* XEDIT PROFILE FOR SETTING THE SCREEN*/
+TRACE 'off'
+OPTION = 'AND'
+BINDER = ' '
+MANUAL.1 = ' '
+MANUAL.2 = ' '
+MANUAL.3 = ' '
+TEXT   = ' '
+'EXTRACT /FNAME/TERMINAL/LSCREEN'
+IF RC^=0 THEN EXIT
+width = lscreen.2
+pf1='1=Help        2=Add        3=Quit       4=Find        5=Change       6=Clear '
+pf2='7=Backward    8=Forward                10=Delete                    12=Cursor'
+pf1=center(pf1,width,' ')
+pf2=center(pf2,width,' ')
+'SET LRECL 255'
+'SET PF4 EMSG UNDEFINED KEY'
+'SET PF16 EMSG UNDEFINED KEY'
+'SET RECFM V'
+'SET TRUNC 255'
+'SET CASE M I'
+'SET MSGMODE OFF'
+'SET VARBLANK ON'
+/*CHECK THE TERMINAL TYPE*/
+IF TERMINAL.1^= DISPLAY THEN DO
+               SAY 'THIS TERMINAL CANNOT BE USED TO RUN THIS ROUTINE'
+               EXIT
+         END /*This routine can be invoked only on display terminal*/
+/*SET UP TERMINAL CHARACTERISTICS*/
+'SET WRAP ON'
+'SET STAY OFF'
+'SET LINEND OFF'
+'SET SCALE OFF'
+'SET PREFIX OFF'
+'SET MSGLINE ON -3 3'
+'SET COLOR MSGLINE BLUE HIGH'
+'SET COLOR CMDLINE BLUE NOH'
+'SET COLOR STATAREA BLUE NOH'
+'SET COLOR ARROW BLUE NOH'
+'SET CTLCHAR ! ESCAPE'
+'SET CTLCHAR % PROTECT HIGH'
+'SET CTLCHAR \ PROTECT NOHIGH'
+'SET CTLCHAR @ NOPROTECT HIGH'
+'SET CTLCHAR $ NOPROTECT NOHIGH'
+PUSH '!% !\ !@ !$'
+PULL PH PN NH NN
+BINR=3
+BINC=12
+MAN1=35
+MAN2=42
+MAN3=49
+DO FOREVER
+   'CMS DESBUF'/* empty the buffer*/
+   CALL SETMENU/*call routine to set up the screen*/
+   IF PFKEY ^=" " THEN 'CURSOR SCREEN ' BINR BINC
+   'READ ALL TAG'
+   PULL SLINE
+   QUEUE SLINE
+   SENTRIES
+   NUMLINE = RC
+   DO NUMLINE
+       PFKEY=''
+       PULL SLINE
+       KEYDEF = WORD(SLINE,1)
+       SELECT;
+           WHEN KEYDEF = 'ETK' THEN DO
+              'CURSOR CMDLINE PRIORITY 30'
+              CALL PF4
+           END
+           WHEN KEYDEF = 'PAK' THEN CALL ENDMOD
+           WHEN KEYDEF = 'PFK' THEN DO
+                                       PFKEY = WORD(SLINE,2)
+                                       IF PFKEY > 12 THEN PFKEY=PFKEY-12
+                                       CALL ENDMOD
+                                    END
+           WHEN KEYDEF = 'RES' THEN DO
+                                   SAVER=WORD(SLINE,2)
+                                   SAVEC=WORD(SLINE,3)
+                                    IF SAVER=BINR THEN DO
+                                     IF SAVEC=BINC THEN
+                                       BINDER=STRIP(WORD(SLINE,4))
+                                     ELSE IF SAVEC=MAN1 THEN
+                                        MANUAL.1=STRIP(WORD(SLINE,4))
+                                        ELSE IF SAVEC=MAN2 THEN
+                                        MANUAL.2=STRIP(WORD(SLINE,4))
+                                      ELSE MANUAL.3=STRIP(WORD(SLINE,4))
+                                         END
+                                        ELSE DO
+                                          IF SAVER=BINR+1 THEN
+                                             TEXT=STRIP(SUBWORD(SLINE,4))
+                                             ELSE OPTION=STRIP(WORD(SLINE,4))
+                                             END
+                                        CALL ENDMOD
+                                        END
+           WHEN KEYDEF = 'CMD' THEN DO
+                              CMDL=STRIP(SUBWORD(SLINE,2))
+                              IF CMDL=" " THEN CALL ENDMOD
+                              ELSE DO
+                                   IF CMDL^= QUIT THEN CALL CMSPASS
+                                   ELSE DO
+                                        PFKEY = 3
+                                        CALL ENDMOD
+                                        END
+                               END
+                 END
+           OTHERWISE NOP
+        END;/* OF SELECT */
+    END         /* OF NUMLINE*/
+END            /* OF FOREVER LOOP*/
+CMSPASS:
+IF SUBSTR(CMDL,1,1) = '\' THEN DO
+   CMDL=SUBSTR(CMDL,2)
+   ''CMDL
+END
+ELSE
+    'CMS' CMDL
+IF RC=0 THEN CMDL=" "
+RETURN
+ENDMOD:
+IF PFKEY^=" " THEN DO
+                    PF='PF'||PFKEY
+                    INTERPRET 'CALL 'PF
+               END
+RETURN
+/*Let's get some help!!!!!*/
+PF1:
+'CMS HELP MANUALS'
+RETURN
+/*clear the screen. Read it and do nothing!*/
+PF6:
+BINDER=''
+MANUAL.1=''
+MANUAL.2=''
+MANUAL.3=''
+TEXT=''
+RETURN
+/*nothing to forward or backward*/
+PF7:
+PF8:
+E='These keys are valid only when using the "FIND" option'
+CALL ERROR
+RETURN
+PF9:
+PF11:
+E='WNM657E Undefined PFkey'
+CALL ERROR
+RETURN
+/*move the cursor on screen*/
+PF12:
+'CURSOR HOME'
+PFKEY=''
+RETURN
+/*getting out of the program using quit and exit*/
+PF3:
+DROPBUF
+E='WNM656E ERROR SAVING THE MANUALS FILE, CALL FOR HELP'
+'EXTRACT /ALT/'
+IF ALT.1^=0 THEN DO
+              'SSAVE IBM MAN$LIST A'
+              IF RC^=0 THEN CALL ERROR
+               END
+           CONWAIT
+           'QUIT'
+           EXIT
+/* want to add some entries????*/
+PF2:
+if BINDER='' then do
+               E='You must specify binder number.'
+               call ERROR
+               return
+               end
+else do
+     BINDER=STRIP(BINDER);MANUAL.1=STRIP(MANUAL.1)
+     MANUAL.3=STRIP(MANUAL.3);MANUAL.2=STRIP(MANUAL.2)
+     IF DATATYPE(BINDER,A)^=1 THEN DO
+                    E='Invalid binder Number'
+                    CALL ERROR
+                    RETURN
+               END
+     IF DATATYPE(MANUAL.1,A)^=1|DATATYPE(MANUAL.2,A)^=1|,
+     DATATYPE(MANUAL.3,A)^=1 THEN DO
+                    E='Invalid Manual Number'
+                    CALL ERROR
+                    RETURN
+                    END
+CALL ADD_ENTRY
+RETURN
+end
+ADD_ENTRY:
+         BAR='-'
+         MANUAL=MANUAL.1||BAR||MANUAL.2||BAR||MANUAL.3
+         BR1='|';BR1=LEFT(BR1,3)
+         BR2='|';BR2=LEFT(BR2,2)
+         TEMP=LEFT(BINDER,8) BR1 LEFT(MANUAL,15) BR2 LEFT(TEXT,80)
+'top'
+'locate/'MANUAL'/'
+   if rc=0 then do
+          E='the entry exists already'
+          call ERROR
+          return
+   end
+'BOTTOM'
+IF RC=1 THEN DO/*no record in the file*/
+            'INPUT  'TEMP
+            E='Entry has been added in the manuals file'
+            call ERROR
+            RETURN
+           END
+'EXTRACT /CURLINE/'
+IF BINDER > strip(word(CURLINE.3,1)) THEN DO
+     'INPUT  'TEMP
+            'INPUT  'TEMP
+            E='Entry has been added in the manuals file'
+            call ERROR
+RETURN
+END
+ELSE DO
+   'TOP'
+   'NEXT'
+   'EXTRACT /CURLINE/'
+    DO WHILE BINDER > strip(WORD(CURLINE.3,1))
+       'NEXT'
+       'EXTRACT /CURLINE/'
+    END
+    IF BINDER = strip(WORD(CURLINE.3,1)) THEN DO
+          MANUAL=delstr(MANUAL,1,1)
+          do while (manual>delstr(strip(word(CURLINE.3,3)),1,1),
+                    & (BINDER^<word(CURLINE.3,1)))
+               'next'
+               'extract/CURLINE/'
+          end
+     end
+          'up'
+          'input  'temp
+            E='Entry has been added in the manuals file'
+            call ERROR
+          return
+END
+/*let's go and find an entry*/
+PF4:
+CALL MAN$DISP BINDER, MANUAL.1,MANUAL.2,MANUAL.3, TEXT, OPTION
+RETURN
+PF10:/*deleting an entry*/
+CALL DELETE_ENTRY
+RETURN
+DELETE_ENTRY:
+'TOP'
+'SET CASE M I'
+'SET VARBLANK ON'
+BAR='-'
+MANUAL=MANUAL.1||BAR||MANUAL.2||BAR||MANUAL.3
+'LOCATE/'strip(BINDER)'/&/'strip(MANUAL)'/'
+IF RC=2 THEN DO
+          E='The entry is nonexistant'
+          CALL ERROR
+          RETURN
+          END
+ELSE DO
+     'DELETE'
+      E='The Entry has been deleted from the records'
+      call ERROR
+     RETURN
+ END
+/*want to change an entry!*/
+PF5:
+IF BINDER='' & MANUAL.1='' THEN DO
+                    E='Must specify Binder and Manuals numbers.'
+                    CALL ERROR
+                    RETURN
+                    END
+ELSE DO
+call DELETE_ENTRY
+call ADD_ENTRY
+E='The Entry has been Changed'
+call ERROR
+return
+END
+SETMENU:
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+end
+T='===>'FNAME.1'MANUALS <=====>MANUALS FILE EDITING <======>' FNAME.1' MANUALS <==
+===='
+'SET RESERVED 1 BLUE HIGH 'T
+T=' Fill in the fields and press a pfkey to display/change the manuals file '
+'SET RESERVED 2 WHITE NOH 'T
+BINDER=LEFT(BINDER,10)
+MANUAL.1=LEFT(MANUAL.1,4)
+manual.2=left(manual.2,4)
+manual.3=left(manual.3,4)
+TEXT=LEFT(TEXT,240)
+T='BINDER_NO:'||NH||BINDER||PN||PN||,
+'MANUAL_NO:'||NH||MANUAL.1||PN||'-'||NH||MANUAL.2||PN||'-'||NH||MANUAL.3,
+||pn
+'SET RESERVED 3 BLUE NOH 'T
+T='TEXT:'||NH||TEXT||PN
+'SET RESERVED 4 BLUE NOH 'T
+T='SEARCH TYPE (AND, OR)'
+OPTION=LEFT(OPTION,3)
+T=T||NH||OPTION''PN
+'SET RESERVED 7 BLUE NOH 'T
+'SET RESERVED 'lscreen.1-4 'BLUE HIGH 'pf1
+'SET RESERVED 'lscreen.1-3 'BLUE HIGH 'pf2
+'SET TOFEOF OFF'
+RETURN
+ERROR:
+'SET MSGM ON LONG'
+'EMSG 'E
+'set msgmode off'
+RETURN

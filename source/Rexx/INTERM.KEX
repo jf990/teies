@@ -1,0 +1,3 @@
+/* THIS PROFILE IS USED TO CALL COD$DISP*/
+call cod$disp
+'quit'

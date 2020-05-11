@@ -1,0 +1,107 @@
+/* memory allocation mapping routine:
+<purpose>extracts the addresses
+from the output of 'd9os_memtrack', looks them up into the given load
+map file, and then substitutes the proper addresses in the call stack.
+<mods> 7 Sept 1989: ken@orion: implemented
+
+*/
+arg loadmapfile '(' options
+if loadmapfile = '?' then do
+   say 'Usage: memmap <LOAD MAP FILE>'
+   say ' '
+   say 'By default will use "LOAD MAP A"'
+   say '"=" means substitutes xedit file name or type'
+   say 'Default file type is "LOADMAP" if not specified'
+   exit 1
+   end
+
+if loadmapfile = '' then loadmapfile = 'LOAD MAP A'
+
+parse value loadmapfile with fname ftype fmode
+if fname = '=' then do
+   'EXTRACT/FNAME'
+   fname = fname.1
+   end
+
+if ftype = '' then ftype = 'LOADMAP'
+if ftype = '=' then do
+   'EXTRACT/FTYPE'
+   ftype = ftype.1
+   end
+
+if fmode = '=' then do
+   'EXTRACT/FMODE'
+   fmode = fmode.1
+   end
+
+loadmapfile = fname ftype fmode
+
+verbose = 'NO'
+if pos('VERB', options) > 0 then verbose = 'YES'
+
+
+/* start the real work */
+old_queue = queued()
+'ALL/OS_MEMA/ | /OS_MEMD/'
+'TOP'
+address_list = ''
+'NUCXLOAD LSVFILER'
+
+
+/* build a list of unique addresses */
+
+do forever
+   'DOWN'
+   if rc ^= 0 then leave
+   'EXTRACT/CURLINE'
+   parse value curline.3 with ':' ':' ':' addresses
+   do while addresses ^= ''
+      parse value addresses with address addresses
+      is_it_valid = strip(translate(address,'                ',
+                                           ,'0123456789abcdef'))
+      if is_it_valid ^= '' then iterate
+
+      if pos(address,address_list) = 0
+         then address_list = address_list address
+      end
+   end
+if verbose = 'YES' then say 'address_list:'address_list
+/* ok, now we've got a unique list of addresses for which we need the
+   corresponding C label */
+
+'LSVFILER' loadmapfile '(KEEP NONUM NODATA'
+list = address_list
+translate_table = ''
+
+/* build a list of translates formated ":address.label." */
+
+do while list ^= ''
+   parse value list with address list
+   'LSVFILER' loadmapfile '(STOR STEM L. NONUM LOCATE',
+   translate(address)
+   parse value l.1 with label .
+   translate_table = translate_table ':'address'.'label'.'
+   end
+
+'LSVFILER' loadmapfile '(PURGE'
+if verbose = 'YES' then say 'translate_table:'translate_table
+
+/* go through the translate list and substitute all the addresses */
+
+list = translate_table
+'TOP'
+do while list ^= ''
+   parse value list with ':' from '.' to '.' list
+   to = left(strip(to),8)
+   if verbose = 'YES' then say 'Will do: CH/ 'from' /'to'/* *'
+   'CH/ 'from' /'to'/* *'
+   end
+
+'ALL'
+
+
+
+
+
+
+

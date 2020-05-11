@@ -1,0 +1,36 @@
+/* fix s_move function call to reflect new parameter list */
+/* 30 July 1987, the s_move function was changed to add a new parameter
+   which indicates the direction of the move.  Since all previous
+   uses of this function have the move only move in one direction,
+   a easy change can be made if only four arguements are detected
+   /Ken */
+'extract/line'
+original_line = line.1
+'TOP'
+lines_changed = ''
+do forever
+   '/s_move'
+   if rc ^= 0 then leave
+   'extract/curline'
+   src_line = curline.3
+   parse value src_line with 's_move' '(' parameters ')'
+   number_param = 0
+   do until parameters = ''
+      parse value parameters with ',' parameters
+      number_param = number_param + 1
+      end
+   'extract/line'
+   if number_param = 4 then do
+      parse value src_line with before 's_move' '(' parameters ')' after
+      new_line = before's_move ('parameters',S_IN)'after
+      'REPLACE' new_line
+      lines_changed = lines_changed line.1
+      end
+   else do
+      say 'Warning: line' line.1 'not modified' number_param 'parameters'
+      end
+   end
+':'original_line
+say 'lines changed:' lines_changed
+return 0
+

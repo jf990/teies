@@ -1,0 +1,151 @@
+USER           TYPE=1             ISV=11              PRIVS = 0
+;
+;
+;
+;
+;  NAME:     USER OBJECT
+;
+;  PURPOSE:  Object definition for use with odt_make
+;
+;
+;
+;
+ %LINKS  type=HSEG
+ {
+
+    ROOT                                type=OID
+    OWNER                               type=OID
+    AUTHOR                              type=OID
+    LAST_EDITOR                         type=OID
+    MODIFIER                            type=OID
+    ACCESS_COUNT                        type=INT
+    LINK_COUNT                          type=INT
+    REVERSECOUNT                        type=INT
+    ACCESS   type=INDEX
+    {
+       OID                              type=OID   Key
+       OBJECT_TYPE                      type=HWRD
+       LINK_TYPE                        type=HWRD
+    }
+    LINKS  type=INDEX
+    {
+       OID                              type=OID   Key
+       OBJECT_TYPE                      type=HWRD
+       LINK_TYPE                        type=HWRD
+    }
+    REVERSE_LINKS   type=INDEX
+    {
+       OID                              type=OID  Key
+       OBJECT_TYPE                      type=HWRD
+       LINK_TYPE                        type=HWRD
+    }
+}
+%SYSTEM   type=HSEG
+{
+    AUTHOR_SIG                    type=HWRD
+    MODIFY_SIG                    type=HWRD
+    TYPE                          type=HWRD
+    OID                           type=OID
+    CREATE_DATE                   type=D/T
+    MODIFY_DATE                   type=D/T
+    LASTACC_DATE                  type=D/T
+    GRANULARITY                   type=D/T
+}
+NAME                              TYPE=HSEG
+{
+    PREFIX                        TYPE=STR  len=12
+    FIRST                         TYPE=STR  len=32
+    MIDDLE                        TYPE=STR  len=32
+    LAST                          TYPE=STR  len=32
+    SUFFIX                        TYPE=STR  len=12
+    NICKNAME                      TYPE=STR  len=25
+    NUMBER                        TYPE=STR  len=4
+}
+HOME_ADDRESS                      TYPE=HSEG
+{
+    APARTMENT                     TYPE=STR  len=9
+    PO_BOX                        TYPE=STR  len=9
+    STREET                        TYPE=STR  len=45
+    CITY                          TYPE=STR  len=45
+    STATE                         TYPE=STR  len=2
+    ZIP_CODE                      TYPE=STR  len=11
+    COUNTRY                       TYPE=STR  len=45
+    TELEPHONE                     TYPE=STR  len=45
+}
+BUS_ADDRESS                       TYPE=HSEG
+{
+    ORGANIZATION                  TYPE=STR  len=79
+    DEPARTMENT                    TYPE=STR  len=79
+    TITLE                         TYPE=STR  len=32
+    MAIL_STOP                     TYPE=STR  len=12
+    PO_BOX                        TYPE=STR  len=12
+    STREET                        TYPE=STR  len=40
+    CITY                          TYPE=STR  len=32
+    STATE                         TYPE=STR  len=25
+    ZIP_CODE                      TYPE=STR  len=15
+    COUNTRY                       TYPE=STR  len=25
+    TELEPHONE                     TYPE=STR  len=50
+}
+PRIVATE                           TYPE=HSEG
+{
+    ACCESS_CODE                   TYPE=STR  len=16
+    PEN_NAME                      TYPE=STR  len=24
+}
+MEMBERSHIPS                       TYPE=HSEG
+{
+    LAST_CONF_ID                  TYPE=INT
+    LAST_GROUP_ID                 TYPE=INT
+    CONFERENCES                   TYPE=OID
+    CONF_COUNT                    TYPE=INT
+    GROUPS                        TYPE=OID
+    GROUP_COUNT                   TYPE=INT
+    CONF_OWNER                    TYPE=OID
+    OWNER_CONF_C                  TYPE=INT
+    GROUP_OWNER                   TYPE=OID
+    OWNER_GROUP_C                 TYPE=INT
+}
+INDEXES                           TYPE=HSEG
+{
+    CC_COUNT                      TYPE=INT
+    NEXT_TICK_ID                  TYPE=STR LEN=4
+    NEXT_NOTIF_ID                 TYPE=STR LEN=4
+    MAILBOX                       TYPE=OID
+    MAIL_COUNT                    TYPE=INT
+    OLD_MAIL                      TYPE=OID
+    OLDMAIL_COUNT                 TYPE=INT
+    MARKED                        TYPE=OID
+    MARKED_COUNT                  TYPE=INT
+    NOTIFICATIONS                 TYPE=OID
+    NEW_NOTIF_COUNT               TYPE=INT
+    OLD_NOTIF                     TYPE=OID
+    OLD_NOTIF_COUNT               TYPE=INT
+    UNDONE_ACT                    TYPE=OID
+    UNDONE_COUNT                  TYPE=INT
+    ACTIVITIES                    TYPE=OID
+    ACT_COUNT                     TYPE=INT
+    INTERESTS                     TYPE=OID
+    INTEREST_CNT                  TYPE=OID
+    TICKETS_ISSD                  TYPE=OID
+    TICK_COUNT                    TYPE=INT
+    STATS                         TYPE=OID
+    STAT_COUNT                    TYPE=INT
+    SYNONYMS                      TYPE=OID
+    SYNONYM_CNT                   TYPE=INT
+    COMMANDS                      TYPE=OID
+    COMMAND_CNT                   TYPE=INT
+    LABELS                        TYPE=OID
+    LABEL_CNT                     TYPE=INT
+    TICKETS_GRANTED               TYPE=OID
+    TICK_GRANT_CNT                TYPE=INT
+}
+SYSTEM                            TYPE=HSEG
+{
+    ID                            TYPE=STR   len=24
+    TYPE                          TYPE=INT
+    STATUS                        TYPE=INT
+    UI_LEVEL                      TYPE=INT
+    LOGTOTAL                      TYPE=INT
+    ROLE                          TYPE=PRIV
+    LAST_ON                       TYPE=D/T
+    DESCRIPTION                   TYPE=OID
+}

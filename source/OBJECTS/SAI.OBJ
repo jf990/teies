@@ -1,0 +1,17 @@
+SAI            type=41        isv=0
+;
+;
+;           System Authored Index of Object ID's          JF 06-23-88
+;
+;
+            SAI                               type=HSEG
+            {
+               INDEX                               type=NDX
+               {
+                  AUTHOR_OID                          type=OID
+                  AUTHORED                            type=SEG
+                  {
+                      OID                                 type=OID
+                  }
+               }
+            }

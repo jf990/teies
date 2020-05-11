@@ -1,0 +1,16 @@
+SERRI        type=48          isv=0
+;
+;
+;          System Error Index                       JF 06-23-88
+;
+;
+;
+            SERRI            type = HSEG
+            {
+              INDEX             type=INDEX
+              {
+                ERROR_CODE                     type=INT key
+                TYPE                           type=INT
+                MESSAGE                        type=STR len=512
+              }
+            }

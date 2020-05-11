@@ -1,0 +1,3 @@
+/* For easier calling of Replace Comment function */
+parse arg comment
+'MACRO SMASK RC' comment

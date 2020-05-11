@@ -1,0 +1,52 @@
+/*this profile is called to insert a category entry in the file*/
+TRACE 'off'
+'EXTRACT/LSCREEN/'
+call setup
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+     end
+'set shadow off'
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+text=''
+do forever
+          e='give the text string'
+          call procerror
+          call newsub
+          datline=strip(result)
+          if datline = 'quit' then return
+          if datline='' then do
+               'all'
+               call setmenu
+               end
+          else do
+          text=datline
+          call setmenu
+          'all/'datline'/'
+          if rc^=0 then do
+               e='no such text string found'
+               call procerror
+               end
+          end
+end/*forever*/
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

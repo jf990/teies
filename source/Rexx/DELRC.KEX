@@ -1,0 +1,28 @@
+/* Remove script revision codes from the current xedit file. */
+/* 3 Jun 87 */
+arg revision_code
+if (revision_code = '') | (revision_code = '?') then do
+   say 'Use: "delrc #" where # is the revision code number'
+   exit 1
+   end
+'extract/line'
+orig_line = line.1  /* save where we were */
+'TOP'
+'extract/case'
+old_case_set = case.1 case.2
+'SET CASE MIXED IGNORE'
+number_deleted = 0
+do forever
+   '/.RC'
+   if rc ^= 0 then leave
+   'extract/curline'
+   parse upper value curline.3 with '.RC' version variable
+   if (version = revision_code) & (pos(variable,'ON OFF') > 0) then do
+      number_deleted = number_deleted + 1
+      'DELETE 1'
+      end
+   end
+'SET CASE' old_case_set
+':'orig_line
+'command msg' number_deleted 'lines deleted'
+return 0

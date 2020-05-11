@@ -1,0 +1,62 @@
+/* KJW:  Changes line from/to tabs/scale/both/off */
+address xedit
+arg given
+todo = substr(given,1,1)
+select
+
+   when todo = 'N' | todo = 'O' then do
+      'set tabline off'
+      'set scale   off'
+   end
+
+   when todo = 'B' then do
+      'set tabline on'
+      'set scale   on'
+   end
+
+   when todo = 'S' then do
+      'set scale   on'
+      'set tabline off'
+   end
+
+   when todo = 'T' then do
+      'set tabline on'
+      'set scale   off'
+   end
+
+   when todo = ''  then do
+      'extract/tabline/scale/'
+      if tabline.1 = 'ON' then do
+         if scale.1 = 'OFF' then do
+            'set tabline off'             /* tab=on, scale=off */
+            'set scale   on'              /* so switch it      */
+         end
+         else                             /* tab=on, scale=on  */
+            'set scale off'               /* so turn off scale */
+      end
+      else do
+         if scale.1 = 'OFF'  then          /* tab=off, scale=off*/
+            'set tabline on'              /* so turn tab on    */
+         else do
+            'set tabline on'              /* tab=off, scale=on */
+            'set scale   off'             /* so switch it      */
+         end
+      end
+   end
+
+   otherwise
+      say '*** Unexpected argument "'given'".'
+      say 'Argument     Result:'
+      say ' '
+      say 'Tab          Set tabline on, set scale off;'
+      say 'Scale        Set scale on, set tabline off;'
+      say 'Both         Set tabline and scale on;'
+      say 'Neither      Set tabline and scale off;'
+      say 'Off           "     "     "    "    "  '
+      say ' '
+      say 'In no argument is given, then scale and tabline are toggled;'
+      say 'if both or neither is on, scale is set off and tabline is set on.'
+      exit(1)
+end
+
+exit(0)

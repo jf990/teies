@@ -1,0 +1,70 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     ERRS XEDIT                                        |*/
+/*|                                                              |*/
+/*| :LEVEL.    level                                             |*/
+/*|                                                              |*/
+/*| :GLOBAL.   sel(name)    REXX_str   IN    comment             |*/
+/*|                                                              |*/
+/*| :PARAM.    name         REXX_str   IN    comment             |*/
+/*|                                                              |*/
+/*| :PURPOSE.  purpose                                           |*/
+/*|                                                              |*/
+/*| :OUTPUT.   output                                            |*/
+/*|                                                              |*/
+/*| :CALLS.    calls                                             |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.                                                     |*/
+/*|                                                              |*/
+/*| :MODS.     02_Mar_87   K.J.Walsh   Implemented.              |*/
+/*| :MODS.     17_Jun_88   K.J.Walsh   Spiffed it up a bit.      |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+'EXTRACT/FNAME'
+parse arg file
+if file = '' then
+   file = fname.1
+
+CmsTypeRT = cmsflag('CMSTYPE')
+if CmsTypeRT then
+   'SET CMSTYPE HT'
+
+'STATE' file 'PPPERRS *'
+if rc = 0 then
+   ppperrs = 1
+else
+   ppperrs = 0
+
+'STATE' file 'ERRS *'
+if rc = 0 then
+   errs = 1
+else
+   errs = 0
+
+if CmsTypeRT then
+   'SET CMSTYPE RT'
+
+if ppperrs then
+do
+   say '------------' file 'PPPERRS *'
+   'CMS TYPE 'file' PPPERRS *'
+end
+if errs then
+do
+   say '------------' file 'ERRS *'
+   'CMS TYPE 'file' ERRS *'
+end
+
+if ppperrs | errs then
+   say '------------'
+
+if ^ ppperrs & ^ errs then
+   'MSG No error files found for "'file'".'
+else if ^ ppperrs then
+   'MSG No PPP error file found for "'file'".'
+else if ^ errs then
+   'MSG No CW error file found for "'file'".'

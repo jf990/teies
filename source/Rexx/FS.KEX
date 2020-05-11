@@ -1,0 +1,18 @@
+/* REXX */
+parse arg fd
+address cms
+'makebuf'
+'list' fd '(fifo' ; rcode = rc
+if rcode ^= 0 then do
+    'dropbuf'
+    exit(rcode)
+end
+'sentries' ; files = rc
+address xedit
+do files
+    parse pull line
+    'input 'line
+end
+address cms 'dropbuf'
+exit
+

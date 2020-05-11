@@ -1,0 +1,18 @@
+SDI         type=36     isv=0
+;
+;
+;           System Directory Index                      JF 06-23-88
+;
+;
+    SDI
+    {
+      INDEX                               type=NDX
+      {
+         KEY                               type=STR key len=32
+         DIRECTORY                         type=SEG
+         {
+            TYPE                              type=HWRD
+            OID                               type=OID
+         }
+      }
+    }

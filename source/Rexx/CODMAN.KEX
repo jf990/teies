@@ -1,0 +1,232 @@
+/* THIS PROFILE IS USED ON THE SUBSYSTEM FILE AND THEN IT CALLS OTHER PROFILES
+OR MACROS TO ACT ON OTHER DATA FILES                                     */
+
+TRACE 'off'
+'EXTRACT /FNAME/TERMINAL/LSCREEN'
+IF RC^=0 THEN EXIT
+call setup
+'SET PF4 EMSG UNDEFINED KEY'
+'SET PF16 EMSG UNDEFINED KEY'
+'SET CTLCHAR ! ESCAPE'
+'SET CTLCHAR % PROTECT HIGH'
+'SET CTLCHAR \ PROTECT NOHIGH'
+'SET CTLCHAR @ NOPROTECT HIGH'
+'SET CTLCHAR $ NOPROTECT NOH'
+PUSH '!% !\ !@ !$'
+PULL PH PN NH NN
+REAL=0
+status=0
+datline=''
+WIDTH=lscreen.2
+row=18
+column=44
+row1=19
+col1=55
+'SET RESERVED 22 BLUE NOH'
+address cms 'globalv stack cont'
+parse pull cont
+if cont=0 then do
+opt=''
+opt=left(opt,1)
+t='=====>ERROR CODE MANAGEMENT SYSTEM<====>ERROR CODE MANAGEMENT SYSTEM<====='
+t=center(t,width)
+i=1
+do lscreen.1-3
+         'set reserved 'i' blue noh'
+          i=i+1
+end
+'SET RESERVED 1 BLUE HIGH 't
+t='Use Real System(y/n):'||nh||opt||pn
+'SET RESERVED 4 blue noh 't
+'CURSOR SCREEN ' 4 23
+call altset
+IF result='y' THEN do
+     REAL=1
+     address cms 'state ec$file data l'
+     if rc=0 then address cms 'copy ec$file data l ec$file data a (rep'
+     address cms 'state sc$file data l'
+     if rc=0 then address cms 'copy sc$file data l sc$file data a (rep'
+     address cms 'state ss$file data l'
+     if rc=0 then address cms 'copy ss$file data l ss$file data a (rep'
+     address cms 'globalv set cont 1'
+     'quit'
+     exit
+end
+end
+if cont=1 then REAL=1
+address cms 'globalv set REAL 'REAL
+if REAL=1 then do
+            e='WARNING! You are using the real system'
+            call procerror
+            end
+          else do
+              e='The changes made will not effect real system'
+              call procerror
+             end
+address cms 'globalv set subvar 0'
+address cms 'globalv set catvar 0'
+do forever
+call preset
+if (stat=1) then do
+          interpret 'call 'callline
+          stat=0
+          end
+end/*of forever loop*/
+proccode:
+select;
+     when code=1 then call asname ecdisp
+     when code=2 then call asname ecfind
+     when code=3 then call asname eccreate
+     when code=4 then call asname ecmodify
+     when code=5 then call asname ecdelete
+     when code=6 then call asname scdisp
+     when code=7 then call asname scfind
+     when code=8 then call asname sccreate
+     when code=9 then call asname scmodify
+     when code=10 then call asname scdelete
+     when code=11 then call asname ssdisp
+     when code=12 then call asname ssfind
+     when code=13 then call asname sscreate
+     when code=14 then call asname ssmodify
+     when code=15 then call asname ssdelete
+     when code=16 then call asname eclist
+     otherwise do
+               e='invalid code number'
+               call procerror
+               end
+end;
+return
+procerror:
+'SET MSGM ON LONG'
+'emsg ' e
+return
+pf3:
+address cms 'dropbuf'
+e='Error saving the Error code file, Call for help.'
+'EXTRACT /ALT/'
+if ALT.1^=0 then do
+                    'save'
+                    if rc^=0 then call procerror
+                  end
+address cms 'conwait'
+'quit'
+exit
+SETMENU:
+'SET MSGMODE OFF'
+code=''
+code=left(code,2)
+I=2
+DO LSCREEN.1-3
+      'SET RESERVED 'I' BLUE NOH'
+      I=I+1
+END
+t='=====>ERROR CODE MANAGEMENT SYSTEM<====>ERROR CODE MANAGEMENT SYSTEM<====='
+t=center(t,width)
+'set reserved 1 blue noh 't
+T='             ERROR        SUBSYSTEM         SPECIFIC'
+T=CENTER(T,WIDTH)
+'SET RESERVED 5 BLUE NOH 'T
+T='              CODE         CATEGORY        SUBSYSTEM'
+T=CENTER(T,WIDTH)
+'SET RESERVED 6 BLUE NOH 'T
+T='Display       (1)             (6)              (11)'
+T=CENTER(T,WIDTH)
+'SET RESERVED 8 BLUE NOH 'T
+T='Find          (2)             (7)              (12)'
+T=CENTER(T,WIDTH)
+'SET RESERVED 9 BLUE NOH 'T
+T='Create        (3)             (8)              (13)'
+T=CENTER(T,WIDTH)
+'SET RESERVED 11 BLUE NOH 'T
+T='Modify        (4)             (9)              (14)'
+T=CENTER(T,WIDTH)
+'SET RESERVED 13 BLUE NOH 'T
+T='Delete        (5)             (10)             (15)'
+T=CENTER(T,WIDTH)
+'SET RESERVED 14 BLUE NOH 'T
+T='              PRINT ENTIRE ERROR CODE LISTING (16)'
+'SET RESERVED 16 BLUE NOH 'T
+t='              Error Code Management Choice'||nh||code||pn
+'SET RESERVED 18 BLUE NOH 't
+return
+preset:
+    CALL SETMENU
+   'cursor screen ' row column
+     call altset
+     code =strip(result)
+     if code='quit' then call pf3
+     if datatype(code)='NUM' then call proccode
+     else do
+          e='invalid option'
+          call procerror
+          end
+return
+ecdisp:
+call cod$disp
+return
+asname:
+parse arg callline
+stat=1
+return
+scdisp:
+'xedit sc$file data a (profile interm width 255'
+return
+ssdisp:
+'xedit ss$file data a (profile interm width 255'
+return
+eccreate:
+'XEDIT SS$FILE DATA a (PROFILE INTERMA WIDTH 255'
+'XEDIT SC$FILE DATA a (PROFILE INTERMB WIDTH 255'
+call eccrac
+return
+sscreate:
+'XEDIT SS$FILE DATA a (PROFILE SUBCONNE WIDTH 255'
+return
+sccreate:
+'XEDIT SS$FILE DATA a (PROFILE INTERMA WIDTH 255'
+'XEDIT SC$FILE DATA a (PROFILE SUBCONNC WIDTH 255'
+return
+ssdelete:
+address cms 'globalv set subvar 1'
+'XEDIT SS$FILE DATA a (PROFILE SUBDEL WIDTH 255'
+address cms 'globalv stack delsub'
+parse pull delsub
+if delsub^=0 then do
+     'xedit sc$file data a (profile catdelc width 255'
+     call eraser
+end
+address cms 'globalv set subvar 0'
+return
+scdelete:
+address cms 'globalv set catvar 1'
+'xedit sc$file data a (profile subdel width 255'
+address cms 'globalv stack delsub'
+parse pull delsub
+if delsub^=0 then call eraser
+address cms 'globalv set catvar 0'
+return
+eraser:
+     'top'
+     'locate/('||delsub
+     do while rc=0
+          'delete'
+          'up'
+          'locate/('||delsub
+     end
+return
+ecdelete:
+call ecdel
+return
+ecmodify:
+call modall
+return
+scmodify:
+'xedit sc$file data a (profile scmod width 255'
+return
+ssmodify:
+'xedit ss$file data a (profile ssmod width 255'
+return
+eclist:
+e='this option is not working now'
+call procerror
+return

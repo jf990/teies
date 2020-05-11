@@ -1,0 +1,44 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     ARCHIVE XEDIT                                     |*/
+/*|                                                              |*/
+/*| :LEVEL.                                                      |*/
+/*|                                                              |*/
+/*| :GLOBAL.                                                     |*/
+/*|                                                              |*/
+/*| :PARAM.    fn           REXX_str   IN    Filename            |*/
+/*| :PARAM.    ft           REXX_str   IN    Filetype            |*/
+/*| :PARAM.    fm           REXX_str   IN    Option filemode     |*/
+/*|                                                              |*/
+/*| :PURPOSE.  Saves the file currently being edited to a        |*/
+/*|            file with the current date shown in the type.     |*/
+/*|                                                              |*/
+/*| :OUTPUT.                                                     |*/
+/*|                                                              |*/
+/*| :CALLS.                                                      |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.                                                     |*/
+/*|                                                              |*/
+/*| :MODS.     19_Feb_88   K.J.Walsh   Implemented.              |*/
+/*| :MODS.     26_Oct_88   K.J.Walsh   Added documentation.      |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+parse arg huh
+
+if huh ^= '' then
+do
+   'COMMAND EMSG *** ARCHIVE:  No arguments accepted.'
+   exit 1
+end
+
+'EXTRACT/FTYPE/FNAME/FMODE'
+d = date('O')
+d=left(strip(ftype.1,'B'),2,'$')||substr(d,1,2)||substr(d,4,2)||substr(d,7,2)
+'COMMAND PSAVE =' d '='
+if rc = 0 then
+   address command 'COPYFILE' FNAME.1 d FTYPE.1 '( OLDDATE PACK'
+exit rc

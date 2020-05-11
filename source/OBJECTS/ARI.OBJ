@@ -1,0 +1,19 @@
+ARI       type=45 isv=0
+;
+;     Action Resolution Index - not currently implemented.  Designed
+;     to maintain the location and type of all Object - Actions for
+;     system tailoring.  Currently handled with the Object Level AOM().
+;
+;
+;
+         ARI
+         {
+            INDEX                 type=INDEX
+            {
+               ACTION_CODE           type=BYTE  key
+               ROLE                  type=PRIV
+               CODE_TYPE             type=BYTE
+               CODE_PATH             type=STR  len=20
+               FORM_PATH             type=STR  len=20
+            }
+        }

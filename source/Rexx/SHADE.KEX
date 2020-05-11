@@ -1,0 +1,13 @@
+/* KJW:  Flip SETSHADOW setting */
+'EXTRACT/SHADOW/'
+if shadow.1 = 'OFF' then
+   set_to = 'ON'
+else if shadow.1 = 'ON' then
+   set_to = 'OFF'
+else do
+   'EMSG *** UNEXPECTED SHADOW VALUE "'shadow.1'" ***'
+   exit 1
+end
+'SET SHADOW 'set_to
+'MSG SHADOW now 'set_to
+exit 0

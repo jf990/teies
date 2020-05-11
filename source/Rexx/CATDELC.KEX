@@ -1,0 +1,14 @@
+/*called by subdel this routine deletes entries from category file*/
+'set msgm off'
+call setup
+address cms 'globalv stack delsub'
+parse pull delsub
+'top'
+'locate/('||delsub
+do while rc=0
+     'delete'
+     'up'
+     'locate/('||delsub
+end
+'save sc$file data a'
+'quit'

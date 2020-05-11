@@ -1,0 +1,74 @@
+set case mixed
+set attr 10 11 11 11 11 13 12 11  7 11  7  15
+set num on
+set logo off
+set prefix on Right
+set prefix off
+set scale on 2
+set autosave 15
+set locking on
+set timecheck on
+set mousebar on
+'set linend on `'
+'set arbchar on ~'
+set inputm full
+set impmacro on
+set defext ON
+'TABSIN ON 3'
+'REPROFILE ON'
+'KEYBOARD ENHANCED'
+'TABSIN ON'
+'MARGIN 1 80'
+'SHIFTSTATE ON'
+'BEEP ON'
+'SHADOW OFF'
+"define f1  'sos tabcmdf'"
+"define f2  'sos lineadd'"
+define f5  'sos lineadd marginl'
+define f7  'split aligned'
+define f8  'join aligned'
+define f9  'sos delword'
+define f10 'sos delend'
+define f11 'cmatch'
+"define f12 'sos qcmnd';'text ?';'sos execute'"
+"define a-[ 'cmatch'"
+"define a-] 'cmatch'"
+"define a-, 'shift left 1 block'"
+"define a-. 'shift right 1 block'"
+"define a-h 'x F:\stdinc\windows.h'"
+"define a-e 'x =.err'"
+"define a-f2 'cc'"
+"define a-f1 'doscc'"
+"define a-f3 'dllcc'"
+"define a-f4 'masm'"
+"define a-f7 'shift left 3 block'"
+"define a-f8 'shift right 3 block'"
+"define a-f11 'nop'"
+"define a-f12 'QQQ'"
+"define a-curl 'sos firstchar'"
+"define a-curr 'sos endchar'"
+"define a-curu ':1';'sos makecurr'"
+"define a-curd 'bottom';'sos makecurr'"
+"define a-/ 'k fkeys.txt';':10'"
+"define a-\ 'sos makecurr'"
+"define a-enter 'enter'"
+
+if fext.1() = "*" then do
+
+   'Dir 'Fname.1()'.*'
+   Exit
+   End
+
+if fext.1() = "C" then do
+   'cmacro'
+   End
+if fext.1() = "H" then do
+   'cmacro'
+   End
+
+IF FEXT.1() = "ASM" THEN
+   'TABS 15 22 40'
+ELSE IF FEXT.1() = "SRC" THEN
+   'TABS 11 16 21'
+ELSE
+   'TABS INCR 3'

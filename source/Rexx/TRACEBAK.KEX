@@ -1,0 +1,112 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     TRACEBAK XEDIT                                    |*/
+/*|                                                              |*/
+/*| :LEVEL.    TOOLS                                             |*/
+/*|                                                              |*/
+/*| :GLOBAL.                                                     |*/
+/*|                                                              |*/
+/*| :PARAM.    mapfile      REXX_str   IN    Name of LOAD MAP    |*/
+/*|                                          file.               |*/
+/*|                                                              |*/
+/*| :PURPOSE.  Finds C runtime errors in the file being edited,  |*/
+/*|            and translates the address given in the trace     |*/
+/*|            stack into the names given in the load map file.  |*/
+/*|                                                              |*/
+/*| :OUTPUT.                                                     |*/
+/*|                                                              |*/
+/*| :CALLS.                                                      |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.                                                     |*/
+/*|                                                              |*/
+/*| :MODS.     11_Feb_88   K.Ng        Implemented.              |*/
+/*|                                                              |*/
+/*| :MODS.     09_Dec_88   K.J.Walsh   Minor modifications.      |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+parse upper arg map_file
+
+/* specify a default if no file name was given */
+if map_file = '' then map_file = 'LOAD MAP *'
+
+/* tack on a filemode of '*' of user forgot it */
+parse value map_file with filename filetype filemode extra
+if filemode = '' then filemode = '*'
+
+/* tack on a filetype of 'LOADMAP' of user forgot it */
+if filetype = '' then filetype = 'LOADMAP'
+
+map_file = filename' 'filetype' 'filemode;
+
+call load_loadmap
+
+'COMMAND EXTRACT/CURLINE/LINE'  /* curline.3 has line contents */
+                                /* line.1 has file line number */
+original_line = line.1
+if curline.3 /= 'Traceback started' then do
+   'COMMAND LOCATE/traceback started'
+   if rc ^= 0 then do
+      'COMMAND EMSG *** TRACEBAK:  "Traceback started" line not found'
+      exit 1
+      end
+   end
+
+
+'COMMAND EXTRACT/LINE'
+start_line = line.1
+'COMMAND LOCATE/traceback ended'
+if rc ^= 0 then do
+   'COMMAND EMSG *** TRACEBAK:  "Traceback ended" line not found'
+   exit 1
+   end
+
+'COMMAND EXTRACT/LINE'
+last_line = line.1
+num_entries = last_line - start_line - 1
+'COMMAND :'start_line+2
+address_list = ''
+do num_entries - 1
+   'COMMAND EXTRACT/CURLINE'
+   parse value curline.3 with address remainder
+   replacement = left(get_name(address),10) strip(remainder)
+   'COMMAND REPLACE' replacement
+   'COMMAND DOWN 1'
+end
+'COMMAND :'start_line
+
+exit 0
+
+/* -------------------------------------------------------*/
+get_name:
+   parse arg target
+   target = d2x(x2d(target),6)     /* Upper and pad w/0's */
+
+   do i = 1 to extern_count
+      if address.i = target then
+         return label.i
+   end
+   'COMMAND EMSG *** TRACEBAK:  Address "'target'" not found'
+   return target
+
+/* -------------------------------------------------------*/
+load_loadmap:
+   address command 'EXECIO * DISKR' map_file '(FINIS STEM LOADMAP.'
+   if rc ^= 0 then
+   do
+      rcode = rc
+      'COMMAND EMSG *** TRACEBAK:  EXECIO error RC='rc 'reading',
+         'file "'map_file'".'
+      exit rcode
+   end
+
+   extern_count = LOADMAP.0
+
+   do i = 1 to extern_count
+      parse var LOADMAP.I label.i . 14 address.i .
+   end
+   drop LOADMAP.
+   return

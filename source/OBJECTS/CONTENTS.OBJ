@@ -1,0 +1,58 @@
+CONTENTS       type=12     isv=22
+;
+;         this is the definition of any item's contents of text, graphics
+;         or multi-media information as a part of an object.
+;
+;
+                %LINKS  type=ROOT
+                {
+
+                   ROOT                                type=OID
+                   OWNER                               type=OID
+                   AUTHOR                              type=OID
+                   LAST_EDITOR                         type=OID
+                   MODIFIER                            type=OID
+                   ACCESS_COUNT                        type=INT
+                   LINK_COUNT                          type=INT
+                   REVERSECOUNT                        type=INT
+                   ACCESS   type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+                   LINKS  type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+                   REVERSE_LINKS   type=INDEX
+                   {
+                      OID                              type=OID  Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+               }
+               %SYSTEM   type=ROOT
+               {
+                   AUTHOR_SIG                    type=HWRD
+                   MODIFY_SIG                    type=HWRD
+                   TYPE                          type=HWRD
+                   OID                           type=OID
+                   CREATE_DATE                   type=D/T
+                   MODIFY_DATE                   type=D/T
+                   LASTACC_DATE                  type=D/T
+                   GRANULARITY                   type=D/T
+               }
+               CONTENT   type=SEG
+               {
+                   DUMMY1   type=INT
+                   DUMMY2   type=INT
+                   CONTENTS                           type=INDEX
+                   {
+                        LINE_NUM                           type=INT key
+                        BSE                                type=INT
+                        TEXT                           type=STR  len=256
+                   }
+               }

@@ -1,0 +1,24 @@
+SGI       type=36    isv=0
+;
+;   Index of Groups by Group ID and/or Label
+;
+;
+;
+           SGI    type=ROOT
+           {
+              ID                      type=INDEX
+              {
+                 GROUP_ID                    type=STR len=32 KEY
+                 OID                         type=OID
+              }
+              LABEL                   type=INDEX
+              {
+                 GROUP_LABEL                 type=STR len=32 key
+                 OID                         type=OID
+              }
+              SYSTEM                  type=SEG
+              {
+                 TOTAL_GROUPS                type=INT
+                 NEXT_GROUP_ID               type=INT
+              }
+           }

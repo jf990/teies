@@ -1,0 +1,136 @@
+/*this routine is called to insert an error code entry*/
+trace off
+'extract/lscreen/'
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+     end
+call setup
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+numb=''
+address cms 'globalv stack catdat'
+parse pull catdat
+catdat=strip(catdat)
+address cms 'globalv stack status'
+parse pull status
+status=strip(status)
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+do forever
+     rpt=1
+     numb=LEFT(numb,5)
+     t='              SPECIFIC ERROR CODE NUMBER:'||nh||numb||pn
+     'SET RESERVED 'lscreen.1-5' BLUE NOH 't
+     'CURSOR SCREEN 'lscreen.1-5 43
+     call altset
+     datline=STRIP(result)
+     if datline='' then do
+               call setmenu
+               'all'
+               end
+     if (datline='quit') then return
+     if (datatype(datline)='NUM') then do
+          if (length(datline)=1|length(datline)=4) then rpt=0
+          if ((status='Y') & length(datline)=3) then rpt=0
+          if ((status='Y') & length(datline)=2) then ecode=datline
+          if ((status='N') & length(datline)=2) then ecode='0'||datline
+          if ((status='N') & length(datline)=3) then ecode=datline
+          if length(datline)=5 then do
+               temp2=delstr(datline,4,2)
+               if catdat=temp2 then ecode=delstr(datline,1,3)
+               else do
+                     i=1
+                     do lscreen.1-5
+                     'set reserved 'i' blue noh'
+                      i=i+1
+                      end
+                  rpt=0
+                  end
+          end
+          if rpt then call movefor
+          else  do
+              e='invalid error code number'
+              call procerror
+              end
+     end
+     else  do
+          e='invalid error code number'
+          call procerror
+          end
+end/*forever*/
+movefor:
+call setmenu
+'set shadow off'
+'all/('catdat||ecode'/'
+if rc^=0 then do
+          i=1
+          do lscreen.1-5
+               'set reserved 'i' blue noh'
+               i=i+1
+          end
+          'set scope display'
+          'set display 0 1'
+          'set shadow on'
+          'set select 0'
+end
+'top'
+'locate/('||catdat||ecode'/'
+if rc=0 then do
+     e='this error code ' catdat||ecode 'already exists'
+     call procerror
+     end/*of if locate*/
+else do
+          text=''
+          e='give text for error code 'catdat||ecode
+          call procerror
+          call newsub
+          datline=strip(result)
+          if datline = 'quit' then return
+          text=datline
+          erline='('||catdat||ecode||')'     text
+          call subinsert
+end
+return
+subinsert:
+'bottom'
+if rc=1 then do/*no record in the file*/
+          'input 'erline
+          e=' the entry has been added in the system'
+          call procerror
+          return
+          end
+'extract /curline/'
+temp=delstr(delstr(strip(word(curline.3,1)),1,1),6,1)
+temp1=catdat||ecode
+if temp1>temp then 'input 'erline
+else do
+     'top'
+     do until temp1<delstr(delstr(strip(word(curline.3,1)),1,1),6,1)
+          'next'
+          'extract /curline/'
+     end
+     'up'
+     'input 'erline
+     end
+e='the entry has been added'
+call procerror
+return
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

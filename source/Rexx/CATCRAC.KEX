@@ -1,0 +1,145 @@
+/*this profile is called to insert a category entry in the file*/
+TRACE 'off'
+'EXTRACT/LSCREEN/'
+call setup
+'set shadow off'
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+address cms 'globalv stack flag'
+parse pull flag
+numb=''
+address cms 'globalv stack subdat'
+parse pull subdat
+subdat=strip(subdat)
+address cms 'globalv stack status'
+parse pull status
+status=strip(status)
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+do forever
+     numb=LEFT(numb,4)
+     t='              SPECIFIC CATEGORY NUMBER:'||nh||numb||pn
+     'SET RESERVED 'lscreen.1-5' BLUE NOH 't
+     'CURSOR SCREEN 'lscreen.1-5 41
+     call altset
+     datline=STRIP(result)
+     if datline='' then do
+               call setmenu
+               'all'
+               end
+     if (flag=1) & (datline='quit') then do
+          'set reserved 'lscreen.1-4' blue noh'
+          address cms 'globalv set flag 0'
+          return
+          end
+     if (datatype(datline)='NUM') then do
+          if length(datline)=1 then do
+                 ecode=datline
+                 leave
+                 end
+          if length(datline)=3 then do
+               temp2=delstr(datline,3,1)
+               if subdat=temp2 then do
+                       ecode=delstr(datline,1,2)
+                       leave
+                       end
+               else do
+                     i=1
+                     do lscreen.1-5
+                     'set reserved 'i' blue noh'
+                      i=i+1
+                      end
+                  e='invalid category number'
+                  call procerror
+                  end
+          end
+     end
+     else  do
+          e='invalid category number'
+          call procerror
+          end
+end/*of forever*/
+if status='N' then do
+          address cms 'globalv set catdat 'subdat
+          address cms 'globalv set flag 0'
+          e='this subsystem 'subdat' cannot contain categories'
+          call procerror
+          return
+     end
+call setmenu
+'all/('subdat||ecode'/'
+if rc^=0 then do
+          i=1
+          do lscreen.1-5
+               'set reserved 'i' blue noh'
+               i=i+1
+          end
+          'set scope display'
+          'set display 0 1'
+          'set shadow on'
+          'set select 0'
+end
+'top'
+'locate/('||subdat||ecode'/'
+if rc=0 then do
+     address cms 'globalv set catdat 'subdat||ecode
+     e='this subsystem category' subdat||ecode 'exists'
+     call procerror
+     return
+     end/*of if locate*/
+          text=''
+          e='give text for category 'subdat||ecode
+          call procerror
+          call newsub
+          datline=strip(result)
+          if datline = 'quit' then do
+               address cms 'globalv set flag 0'
+               return
+               end
+          text=datline
+          erline='('||subdat||ecode||')'     text
+          call subinsert
+          return
+subinsert:
+'bottom'
+if rc=1 then do/*no record in the file*/
+          'input 'erline
+          address cms 'globalv set catdat 'subdat||ecode
+          e='the entry has been added in the system'
+          call procerror
+          return
+          end
+'extract /curline/'
+temp=delstr(delstr(strip(word(curline.3,1)),1,1),4,1)
+temp1=subdat||ecode
+if temp1>temp then 'input 'erline
+else do
+     'top'
+     do until temp1<delstr(delstr(strip(word(curline.3,1)),1,1),4,1)
+          'next'
+          'extract /curline/'
+     end
+     'up'
+     'input 'erline
+     end
+address cms 'globalv set catdat 'subdat||ecode
+e='the entry has been added'
+call procerror
+return
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

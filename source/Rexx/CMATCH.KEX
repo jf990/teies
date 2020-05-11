@@ -1,0 +1,48 @@
+'extract/line/'
+old_line = line.1
+'EXTRACT/CURLINE/'
+direction = 0
+if pos('{', curline.3) > 0 then do
+   direction = 1
+   'extract/size'
+   line_limit = size.1
+   end
+if pos('}', curline.3) > 0 then do
+   direction = -1
+   line_limit = 0
+   end
+if direction = 0 then do
+   return(1)
+   end
+'command point .old_pos'
+run_count = 1
+break = 1
+break_limit = 1000
+error = 0
+do forever
+   break = break + 1
+   if break > break_limit then leave
+   if direction = 1 then do
+      'down'
+      end
+   if direction = -1 then do
+      'up'
+      end
+   'extract/curline/'
+   if curline.2 = line_limit then leave
+   if direction = 1 then do
+      if pos('{',curline.3) > 0 then run_count = run_count + 1
+      if pos('}', curline.3) > 0 then run_count = run_count - 1
+      end
+   else do
+      if pos('{',curline.3) > 0 then run_count = run_count - 1
+      if pos('}',curline.3) > 0 then run_count = run_count + 1
+      end
+   if run_count = 0 then leave
+   end
+if break > break_limit then "Search stopped by program"
+if error = 1 then ".old_pos"
+"command msg" "old line was " old_line
+"COMMAND POINT .old_pos OFF"
+exit
+

@@ -1,0 +1,29 @@
+SMI       type=51    isv=0
+;
+;   Index of Electronic Mail messages by message ID and the global
+;   Mail system database variables.
+;                                                          JF 10-24-88
+;
+           SMI    type=ROOT
+           {
+              MAIL_COUNT              type=INT
+;                                                  Total Number of mail
+;                                                  messages in on this
+;                                                  Master Server.
+;
+              NEXT_AVAILABLE          type=INT
+;                                                  The next available
+;                                                  Mail ID to use for
+;                                                  lk_mail().
+;
+              MESSAGE                 type=INDEX
+              {
+                 ID                          type=STR len=16 KEY
+                 OID                         type=OID
+              }
+              LABEL                   type=INDEX
+              {
+                 ID                          type=STR len=16 key
+                 OID                         type=OID
+              }
+           }

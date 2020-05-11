@@ -1,0 +1,30 @@
+SFI     type=49      isv=0
+;
+;
+;                 TEIES System Forms Index             JF 06-23-88
+;
+;
+;
+          SFI     type=HSEG
+          {
+            INDEX                               type=NDX
+            {
+              STATEID                            type=STR len=4
+              OCD                                type=STR len=32
+              FORMID                             type=STR len=8
+              OID                                type=OID
+              STATUS                             type=INT
+              TYPE                               type=INT
+            }
+          }
+;
+;
+;
+;To find the form for a given state of TEIES, pass the state as the
+;key to SFI.INDEX.STATEID.  The state is a 4 byte binary number.  If
+;the associated entry is found in the SFI, the OCD will be an OCD
+; string containing the NDX segment under the OID where the Form is.  If
+;this is a NULL string, the OID is not a TEIES OID but rather an 8
+;character file name whose extension (file type) is assumed to be FORM.
+;The FORMID string is the TEIES user interface id that is supposed to
+;appear in the upper right corner of each screen (this is 8 bytes).

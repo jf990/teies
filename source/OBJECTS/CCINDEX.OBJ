@@ -1,0 +1,37 @@
+CCINDEX         type=52 isv=0
+;
+;   A conference comment index is attached to the conference root object
+;   and defines all the functional dependencies of the comment object.
+;
+;
+;
+CCINDEX    type=ROOT
+{
+
+  ITEM_ID  type=INDEX
+  {
+     ID                            type=STR  len=16  Key
+     SEQNUM                        type=INT
+  }
+
+  ITEM_DT  type=INDEX
+  {
+     TIME_STAMP                    type=D/T   Key
+     SEQNUM                        type=INT
+  }
+
+  MODIFIED_DT  type=INDEX
+  {
+     TIME_STAMP                    type=D/T   Key
+     SEQNUM                        type=INT
+  }
+
+  ITEM_SN  type=INDEX
+  {
+     SEQNUM                        type=INT   Key
+     OID                           type=OID
+     CREATED                       type=D/T
+     MODIFIED                      type=D/T
+     ID                            type=STR   len=16
+  }
+}

@@ -1,0 +1,11 @@
+/* this routine calls catcrac to insert an entry*/
+'extract/lscreen/'
+i=1
+do lscreen.1-3
+     'set reserved 'i' blue noh'
+     i=i+1
+     end
+address cms 'globalv set flag 1'
+call catcrac
+'save sc$file data a'
+'quit'

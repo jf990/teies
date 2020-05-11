@@ -1,0 +1,43 @@
+/* generate the sequence of routines which led to the current
+   stack backtrace in C */
+/* modified 22 October 1987/ken, to search the new C level tracing */
+
+address cms 'makebuf'
+'SET POINT .LASPOS'
+
+'DOWN'
+do until nest_level ^= ''
+   'UP'
+   'EXTRACT/CURLINE'
+   nest_level = strip(translate(substr(curline.3,1,4),'   ','-><'))
+end
+
+curline.2 = 999
+do until nest_level = 1
+   nest_level = nest_level - 1
+   search_string = ' 'nest_level'>:'
+   '-/'search_string
+   if rc ^= 0 then do
+      say 'Unable to find level' nest_level
+      call exit 1
+   end
+
+   'EXTRACT/LINE'
+   line_number = line.1
+
+   'EXTRACT/CURLINE/'
+   push line_number':'curline.3
+end
+call exit 0
+
+exit:
+arg RCODE
+address cms 'sentries' ; lines = rc
+do lines
+    parse pull line
+    'command msg:'line
+end
+address cms 'dropbuf'
+'.LASPOS'
+'SET POINT .LASPOS OFF'
+exit rcode

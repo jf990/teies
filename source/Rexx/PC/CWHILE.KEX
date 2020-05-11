@@ -1,0 +1,11 @@
+if \ command() then do
+   'sos Save'
+   'Text while ( )'
+   'sos Restore AddLine'
+   'Text {'
+   'sos AddLine AddLine CLeft'
+   'Text }'
+   'sos Restore CUp CUp CUp CR CR CR CR CR CR CR'
+   'Set InsertMode On'
+end
+

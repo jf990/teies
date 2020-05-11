@@ -1,0 +1,3 @@
+/* For easier calling... */
+parse arg comment
+'MACRO SMASK IC' comment

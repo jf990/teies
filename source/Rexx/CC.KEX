@@ -1,0 +1,55 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*|  Name:  CC XEDIT                                             |*/
+/*|  Author:  Kevin J. Walsh                                     |*/
+/*|  Description:  Interfaces with CC EXEC via XEDIT             |*/
+/*|  Modifications:                                              |*/
+/*|     09 Apr 87   KEVIN     Entire "EXEC" rewritten            |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+'COMMAND EXTRACT /FN/FT/FM/ALT/LINE/'
+fn = fname.1
+ft = ftype.1
+fm = substr(fmode.1,1,1)
+parse arg fd '(' options
+
+if fd ^= '' Then do
+    'EXEC CC 'fd'('options ; rcode=rc
+end
+else if ( alt.1 = 0 ) & ( alt.2 = 0 ) then do
+    'exec cc 'fn ft fm'('options ; rcode = rc
+end
+else do
+   if rwdisk(fm) then
+      'SSAVE 'fn' CC 'fm
+   else if rwdisk('A') then do
+      fm = 'A'
+      'SSAVE 'fn' CC A'
+   end
+   else do
+      if fm ^= 'A' then
+         'emsg DMSXCT037E Disk '''fm''' is read only.'
+      'emsg DMSXCT037E Disk ''A'' is read only.'
+      exit 12
+   end
+   'EXEC CC 'fn' CC 'fm'('options; rcode=rc
+   'ERASE 'fn' CC 'fm
+end
+':'line.1
+'set alt' alt.1 alt.2
+if rcode = 0 then
+   exit 0
+'emsg Return code '''rcode''' from ''CC''.'
+exit rcode
+
+rwdisk:
+   arg mode
+   address cms 'Q DISK 'mode' ( LIFO'
+   pull . . accessed status .
+   if accessed = 'NOT' then
+      return 0
+   pull .
+   if status = 'R/W' then
+      return 1
+   else
+      return 0

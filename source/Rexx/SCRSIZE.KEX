@@ -1,0 +1,29 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     SCRSIZE XEDIT                                     |*/
+/*|                                                              |*/
+/*| :LEVEL.    TOOL                                              |*/
+/*|                                                              |*/
+/*| :GLOBAL.                                                     |*/
+/*|                                                              |*/
+/*| :PARAM.                                                      |*/
+/*|                                                              |*/
+/*| :PURPOSE.  Stacks the number of lines and columns for use    |*/
+/*|            by another routine.                               |*/
+/*|                                                              |*/
+/*| :OUTPUT.   Stacks "lll ccc" in which lll=lines & ccc=columns.|*/
+/*|                                                              |*/
+/*| :CALLS.                                                      |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.   REQUIRED by SCREEN EXEC.                          |*/
+/*|                                                              |*/
+/*| :MODS.     29_Jan_87   K.J.Walsh   Implemented.              |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+'COMMAND EXTRACT/LSCREEN/'
+push lscreen.5 lscreen.6
+'COMMAND QUIT'

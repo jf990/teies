@@ -1,0 +1,108 @@
+COMMENT     type=5   isv=15
+;
+;   Definition of a conference comment.
+;
+;
+;
+                %LINKS  type=HSEG
+                {
+
+                   ROOT                                type=OID
+;
+;                            The Root is the object that has a pointer to
+;                            this one.  For example, a conference comment
+;                            will have a Root that is the OID of its
+;                            Conference; a piece of Group mail will have
+;                            a root of the Group.
+;
+                   OWNER                               type=OID
+;
+;                            True owner of the object.
+;
+                   AUTHOR                              type=OID
+;
+;                            OID of the User who created the object.
+;
+                   LAST_EDITOR                         type=OID
+;
+;                            OID of the User who last modified the
+;                            object.
+;
+                   MODIFIER                            type=OID
+                   ACCESS_COUNT                        type=INT
+                   LINK_COUNT                          type=INT
+                   REVERSECOUNT                        type=INT
+                   ACCESS   type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+;
+;                            Links is an Array of segments that contain
+;                            all the forward pointers to Object this
+;                            object is linked to.  These array segments
+;                            are handled specially.  The first OID entry
+;                            is 2 integers, the first contains the total
+;                            number of OIDs in this structure, the second
+;                            is the total number of array segments.  Each
+;                            segment is an array of OIDs.  Each entry in
+;                            the array has the object type to avoid
+;                            opening the target object just to check if
+;                            it is the desired type.  This creates redun-
+;                            dancy that is not desired.
+;
+                   LINKS  type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+;
+;                            Reverse links are similar to Links only
+;                            these are objects that point to this one.
+;                            Each OID here has this OID in its LINKS
+;                            array.
+;
+                   REVERSE_LINKS   type=INDEX
+                   {
+                      OID                              type=OID  Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+               }
+               %SYSTEM   type=HSEG
+               {
+                   AUTHOR_SIG                    type=HWRD
+                   MODIFY_SIG                    type=HWRD
+                   TYPE                          type=HWRD
+                   OID                           type=OID
+                   CREATE_DATE                   type=D/T
+                   MODIFY_DATE                   type=D/T
+                   LASTACC_DATE                  type=D/T
+                   GRANULARITY                   type=D/T
+               }
+               COMMENT    type=SEG
+               {
+                   ID                     type=STR  len=16
+                   SEQNUM                 type=INT
+                   AUTHOR                 type=STR  len=132
+                   MODIFIER               type=STR  len=132
+                   TITLE                  type=STR  len=132
+                   KEYS                   type=STR  len=132
+                   ENTERED                type=D/T
+                   REPLY_ID               type=STR  len=16
+                   ROOT                   type=BYTE
+                   REPLY_LEVEL            type=BYTE
+                   STATUS                 type=INT
+                   CATEGORY               type=INT
+                   REPLY_COUNT            type=INT
+                   NEXT_LINK              type=OID
+                   LINK_STATUS            type=INT
+                   SIGNATURE              type=ISV
+                   ACTIVITY               type=OID
+                   ACT_TYPE               type=ISV
+                   A_SEC_COUNT            type=INT
+                   TYPE                   type=INT
+                   CONTENTS               type=OID
+               }

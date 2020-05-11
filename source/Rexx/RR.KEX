@@ -1,0 +1,6 @@
+/* An abbreviation for "REXXRUN" */
+parse arg fname.1 '(' stuff
+if fname.1 = '' then
+     'extract/fname/'
+address cms 'REXXRUN' fname.1 '(' stuff
+exit(rc);

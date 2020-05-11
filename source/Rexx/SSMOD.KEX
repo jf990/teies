@@ -1,0 +1,4 @@
+/*this is used to call modall to modify in subsystem file*/
+call modall
+'save ss$file data a'
+'quit'

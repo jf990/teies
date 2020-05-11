@@ -1,0 +1,18 @@
+/*this routine does all the initial settings*/
+'SET LRECL 255'
+'SET RECFM V'
+'SET TRUNC 255'
+'SET VARBLANK ON'
+'SET STAY OFF'
+'SET COLOR MSGLINE BLUE HIGH'
+'SET COLOR CMDLINE BLUE NOH'
+'SET COLOR STATAREA BLUE NOH'
+'set pre off'
+'set scale off'
+'set tofeof off'
+'set msgl on -4'
+'set msgmode off'
+'set case m i'
+'set wrap on'
+'SET LINEND OFF'
+return

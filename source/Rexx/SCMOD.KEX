@@ -1,0 +1,4 @@
+/*this is used to call modall to modify in category file*/
+call modall
+'save sc$file data a'
+'quit'

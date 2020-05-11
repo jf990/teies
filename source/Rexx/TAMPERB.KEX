@@ -1,0 +1,53 @@
+/* REXX */
+parse pull LEVEL
+address cms 'makebuf'
+changes = 0
+'top'
+'set linend off'
+'set case m r'
+'set msgmode off'
+'extract/fname/fmode/ftype/'
+fname.1 = strip(fname.1,'b')
+fmode.1 = strip(fmode.1,'b')
+ftype.1 = strip(ftype.1,'b')
+do forever
+    'locate/D_begin/' ; rcode = rc
+    if rcode ^= 0 then
+         leave
+    'extract/curline'
+    parse var curline.3 Space'#'.'D_begin'.'('Name')'After
+    Name = strip(Name,'B')
+    do forever
+    if pos(',',Name) ^= 0 then do
+         say 'Apparently this line does not need to be changed:'
+         say curline.3
+         say 'in "'fname.1 ftype.1 fmode.1'"'
+         leave
+     end
+         newline = Space'#D_begin ( 'Name' , 'level' ) 'after
+         say 'Press <ENTER> to change:'
+         say '"'curline.3'"'
+         say 'in "'fname.1 ftype.1 fmode.1'" to:'
+         say '"'newline'"'
+         say 'or else enter a new level (instead of "'level'"):'
+         say 'Enter "leave" to leave this alone.'
+         parse pull answer
+         if answer = '\' then exit
+         if translate(answer) = 'LEAVE' then leave
+         if answer = '' then do
+              'input 'newline
+              'up 1'
+              'delete 1'
+              changes = changes + 1
+              leave
+          end
+         else
+              level = strip(answer,'B')
+     end
+end
+if changes > 0 then 'save'
+address cms 'dropbuf'
+push level
+push changes
+'qq'
+exit

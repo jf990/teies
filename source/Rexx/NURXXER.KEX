@@ -1,0 +1,1200 @@
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*| :NAME.     NURXXER XEDIT                                     |*/
+/*|                                                              |*/
+/*| :LEVEL.    DEBUG                                             |*/
+/*|                                                              |*/
+/*| :GLOBAL.                                                     |*/
+/*|                                                              |*/
+/*| :PARAM.                                                      |*/
+/*|                                                              |*/
+/*| :PURPOSE.  Called by REXXRUN EXEC and RR EXEC.  Does the     |*/
+/*|            housekeeping of REXXRUNning a MODULE.             |*/
+/*|                                                              |*/
+/*| :OUTPUT.                                                     |*/
+/*|                                                              |*/
+/*| :CALLS.                                                      |*/
+/*|                                                              |*/
+/*| :ERRORS.                                                     |*/
+/*|                                                              |*/
+/*| :LIMITS.                                                     |*/
+/*|                                                              |*/
+/*| :MODS.     27_Oct_86   K.J.Walsh   Implemented.              |*/
+/*| :MODS.     04_Apr_87   K.J.Walsh   Major bugs fixed.         |*/
+/*| :MODS.     04_Apr_87   K.J.Walsh   Sends all commands to CMS |*/
+/*| :MODS.     08_Apr_87   K.J.Walsh   Input uppercase (C req's) |*/
+/*| :MODS.     04_Nov_87   K.J.Walsh   Added RUNC support        |*/
+/*| :MODS.     07_Nov_87   K.J.Walsh   Added support of MODULE   |*/
+/*|                                    argument list.            |*/
+/*| :MODS.     12_Jan_88   K.J.Walsh   Enhanced PF keys.         |*/
+/*| :MODS.     20_Jun_88   K.J.Walsh   Hash table debugging      |*/
+/*|                                    support added.            |*/
+/*|                                                              |*/
+/*| :END.                                                        |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+trace 'N' ; debugging = 0 ; notrapsyntax = 0
+nok = '*** REXXRUN:  '
+if notrapsyntax then
+     syntax = 0
+else do
+     syntax = 1
+     signal on SYNTAX
+end
+signal on ERROR
+signal on HALT
+/* signal on NOVALUE */
+parse upper pull fname ftype fmode notnow notever nohands
+parse pull  invocation
+if invocation /= '' then
+   call msg 'Command line invocation = "'invocation'" no longer accepted',
+      'from REXXRUN invocation line.'
+'extract/fname/terminal/lscreen'       /* Will need later */
+if terminal.1 /= 'DISPLAY' then
+do
+   'EXECIO 1 CP ( VAR CP_SAID STR QUERY USER' userid()
+   parse var CP_SAID .'-'line
+   if strip(line) = 'DSC' then
+   do
+      if notever = 0 & nohands = 0 then
+         call emsg 'PRESUMING "NOTEVER" (NE) FOR DSC USERID ***'
+      notever = 1
+   end
+   else
+   do
+      call emsg 'Cannot run on this type of terminal. ***'
+      exit(13)
+   end
+   lscreen.1 = 43
+   lscreen.2 = 80
+end
+CmsTypeRt = cmsflag('cmstype')
+if notever = 0 then
+do
+   call pfset
+   'COMMAND SET linend off'
+   'COMMAND SET scale off'
+   'COMMAND SET prefix off'
+   'COMMAND SET msgline on -3 3'
+   'COMMAND SET FULLREAD ON'
+   'COMMAND SET color msgline red high'
+   'COMMAND SET color cmdline blue noh'
+   'COMMAND SET color statarea blue noh'
+   'COMMAND SET color arrow blue noh'
+   'COMMAND SET ctlchar \ escape'
+   'COMMAND SET ctlchar % protect high'    /* Protect + Highlight   : ph */
+   'COMMAND SET ctlchar \ protect nohigh'  /* Protect, Nohigh       : pn */
+   'COMMAND SET ctlchar @ noprotect high'  /* Noprotect + Highlight : nh */
+   'COMMAND SET ctlchar $ noprotect nohigh'/* Noprotect, No high    : nn */
+end
+ph = '\%'                                 /* Protect/Hi symbol    */
+pn = '\\'                                 /* Protect/no hi        */
+nh = '\@'                                 /* Noprotect/hi         */
+nn = '$'                                  /* Noprotect/nohi       */
+beginr = 0                                /* Begin row            */
+beginc = 0                                /* Begin column         */
+ishome = 1                                /* Assume at home pos   */
+namewid = 20                              /* var name fileld width*/
+namewid = 16                              /* var name fileld width*/
+valuewid = 39                             /* value fileld width   */
+valuewid = 2                              /* value fileld width   */
+current = 1
+changes = 0                               /* No datafile changes  */
+divert = 0                                /* Default nodivert     */
+profile_exec = ''                         /* Assume no profile    */
+before_exec = ''                          /* Assume no profile    */
+after_exec = ''                           /* Assume no profile    */
+d_name = ''                               /* Name to use          */
+invocation = ''                           /* What call looks like */
+trace = 0                                 /* Default notrace      */
+quit_verify = 0                           /* Save file right away?*/
+data_unchanged = 1                        /* Data is same         */
+spid = 0                                  /* No spool file known  */
+trace_back_trace = 0                      /* TRACE for Tracebak?  */
+topline='----- REXXRUN of 'fname ftype fmode' -----'
+labeline='        VARIABLES:                 VALUES:'
+pflabel.1    = 'Help    '
+pflabel.2    = 'Run     '
+pflabel.3    = 'File    '
+pflabel.4    = 'Get    '
+pflabel.5    = 'Save   '
+pflabel.6    = 'Make HD'
+pflabel.7.1  = 'Up      '
+pflabel.7.2  = 'Bottom  '
+pflabel.8.1  = 'Down    '
+pflabel.8.2  = 'Top     '
+pflabel.9    = 'XoutFD  '
+pflabel.10.1 = ''
+pflabel.10.2 = 'PEEKsf '
+pflabel.11   = 'D&TRCBK'
+pflabel.12   = 'Quit    '
+do i = 1 to 24
+   pfkeys.i = 'PF'i
+end
+use_high_pfkeys = 0
+call output_setup
+call get
+if notnow | notever | nohands then do
+    call pf2
+    if notever | nohands then
+         call pf12
+end
+'COMMAND CURSOR SCREEN 3' namewid+17
+call setscreen
+if debugging then
+    trace all
+do forever
+   'cms desbuf'
+   if debugging then
+         call wait('About to read')
+   call to_xedit('read all tag')
+   parse pull sline       /* PF is LIFO, read all tag is FIFO.  ACK! */
+   queue sline
+   inlines = queued()
+    do inlines
+         parse pull keydef keydata
+         if keydef /= 'PFK' |,
+            ( word(keydata,1) /= 12 & word(keydata,1) /=24 ) then
+               quit_verify = 0
+         rtype = 2
+         select
+              when keydef = 'CMD' then do
+                   keydata = strip(keydata,'B')
+                   if keydata /= '' then
+                     call xcmd
+              end
+              when keydef = 'ETK' then do
+                   ''keydata
+              end
+              when keydef = 'FIL' then do
+                   nop
+              end
+              when keydef = 'PAK' then
+                   nop
+              when keydef = 'PFK' then do
+                   keydata = word(keydata,1)
+                   real_pfkey_num = keydata
+                   if keydata > 12 then
+                   do
+                      keydata = keydata - 12
+                      use_high_pfkeys = 1
+                   end
+                   else
+                      use_high_pfkeys = 0
+                   keydata = 'PF'||keydata
+                   interpret 'call 'keydata
+              end
+              when keydef = 'PRF' then
+                   nop
+              when keydef = 'RES' then do
+                   call getstuff
+              end
+              otherwise do
+                 say '**** ERROR in select of keydef, keydef={'keydef'}',
+                    'keydata={'keydata'}'
+                 signal BYEBYE
+              end
+         end /* of select */
+    end      /* of "do inlines" */
+    if needrefresh = 1 then
+         call setscreen
+end          /* of "do forever" */
+
+/*+--------------------------------------------------------------+*/
+/*|                                                              |*/
+/*|  Subroutines follow...                                       |*/
+/*|                                                              |*/
+/*+--------------------------------------------------------------+*/
+bool:
+   parse upper arg yn
+   yn = strip(yn)
+   if yn = '1' | yn = 'Y' | yn = 'T' then
+      return '1'
+   else if yn = '0' | yn = 'N' | yn = 'F' then
+      return '0'
+   call emsg 'Found "'yn'" where a "0" or "1" was expected. ***'
+   return '?'
+
+BYEBYE:
+    if sigline = 'SIGLINE' then do
+        say 'SIGNAL BYEBYE:'
+        sigline  = sigl
+        justify = 8
+    end
+    line = strip(sourceline(sigline),'L')
+    say 'LINE 'right(sigline,8)':  'line
+    stacked = queued()
+    do i = 0 to stacked-1
+      pull line
+      say 'STACKED AT DEPTH 'i':  "'line'"'
+    end
+   Say "ENTER anything to confirm:"
+   Pull junk
+   say 'May I rest in peace.  (gag, choke, die)...'
+   'EXTRACT/RESERVED'
+   do i = 1 to RESERVED.0
+      parse var RESERVED.i numb .
+      'SET RESERVED' numb 'OFF'
+   rcode = to_xedit('QUIT')
+   exit rcode
+   return
+
+cannot_trace:  procedure expose divert trace trace_back_trace ,
+                                use_high_pfkeys pfkeys.
+   if divert | trace | trace_back_trace then
+   do
+      'EXECIO * CP ( STEM CPSAID. STRING QUERY SET'
+      parse var CPSAID.1 . msg_setting .
+      if msg_setting /= 'ON' then
+      do
+         call emsg 'CP MSG is "'msg_setting'", must be',
+         '"ON" for DIVERT/TRACE/'pfkey(11) 'operation.'
+         return 1
+      end
+   end
+   return 0
+
+clear:
+   if debugging then do
+      trace off
+      call wait('About to clear')
+   end
+   call to_cmd('VMFCLEAR')
+   return
+
+elapsed:
+   parse arg start,stop
+   start_time = secondize(start)
+   end_time = secondize(stop)
+   time = end_time - start_time
+
+   hours = time % 360
+   minutes = ( time // 60) % 60
+   seconds = time // 360
+   return '0'hours':'right(minutes,2,'0')':'right(seconds,2,'0')
+
+emsg: procedure
+   parse arg message
+   'COMMAND EMSG ***' message
+   return
+
+ERROR:
+    rcode = rc
+    say 'SIGNAL ERROR:  RC='rcode
+    sigline  = sigl
+    justify = 6
+    signal BYEBYE
+
+file_exists:  procedure
+   signal off ERROR
+   parse arg fd
+   address command 'ESTATE' fd
+   if rc = 0 then
+      return 1
+   else
+      return 0
+
+filefind:  procedure
+   signal off ERROR
+   parse arg fd
+   'MAKEBUF'
+   address command 'LISTFILE' fd '( FIFO NOH'
+   if rc = 0 then
+   do
+      parse pull fn ft fm .
+      ret_fd = fn ft substr(fm,1,1)
+   end
+   else
+      ret_fd = ''
+   'DROPBUF'
+   return ret_fd
+
+fileget:
+   parse arg fg_stem fg_fd
+   address command 'EXECIO * DISKR' fg_fd,
+      '(FINI STEM' fg_stem'.'
+   return rc
+
+fileput:
+   signal off ERROR
+   parse arg fp_records fp_stem fp_fn fp_ft fp_fm .
+   fp_fd = fp_fn fp_ft fp_fm
+   if riteable('* *' fp_fm) then
+   do
+      newfile = 0
+      if riteable(fp_fd) then
+         'ERASE' fp_fn fp_ft fp_fm
+      else
+         newfile = 1
+      address command 'EXECIO' fp_records 'DISKW' fp_fd,
+         '(FINI STEM' fp_stem'.'
+      if rc = 0 then
+      do
+         if newfile then
+            call msg 'Created "'fp_fd'".'
+         else
+            call msg 'Replaced "'fp_fd'".'
+         return 0
+      end
+      rcode = rc
+   end
+   else
+      rcode = 28
+
+   if fp_fm = 'A' then
+      call emsg 'Unable to write "'fp_fd'".'
+   else
+   do
+      call emsg 'Unable to write "'fp_fd'", trying "A" disk.'
+      rcode = fileput(fp_records fp_stem fp_fn fp_ft 'A')
+   end
+   return rcode
+
+format_pf_label:
+   parse arg f_pf_l_key f_pf_l_data
+   if f_pf_l_data = '' then
+      return copies(' ',12)
+   else
+      return left(pfkey(f_pf_l_key),4)'='left(f_pf_l_data,7)
+
+get:
+   drop data. sw_names. sw_value.
+   sw_names. = ' '
+   sw_value. = ' '
+   input_file = filefind(fname 'REXXRUN *')
+   if input_file = '' then
+   do
+      call msg 'File was uninitilized.'
+      last = 1
+      data.1 = 'D2'fname '= 0'
+      data_unchanged = 1
+   end
+   else
+   do
+      if riteable(input_file) = 0 then
+         call emsg 'Warning:  "'input_file'" is on a R/O disk.'
+      call fileget 'DATA' input_file
+      last = DATA.0
+   end
+
+   parse var data.last name '=' data
+   if name = 'REXXRUN_INTERNAL_DATA' then
+   do
+     last = last - 1
+     data = strip(data)
+     parse var data trace','divert','rr_tos','rr_tof','d_name','data
+     parse var data invocation','profile_exec','before_exec','after_exec
+   end
+   if strip(invocation) = '' then
+      invocation = fname
+
+   call output_setup
+   do i = 1 to last
+      parse var data.i sw_names.i '=' sw_value.i
+      sw_names.i = strip(sw_names.i)
+      sw_value.i = strip(sw_value.i)
+   end
+   /*+-----------------------------------------------------------+*/
+   /*| Run the PROFILE exec if there is one...                   |*/
+   /*+-----------------------------------------------------------+*/
+   if is_an_exec(profile_exec) then
+   do
+      say runline()
+      say 'EXEC' profile_exec
+      rcode = to_cmd('EXEC' profile_exec)
+      if rcode /= 0 then
+      do
+         msg = nok'WARNING:  Profile function "'profile_exec'" returned',
+            'RC='rcode'.'
+         say msg
+         call msg msg
+      end
+      say runline()
+      'BEEP'
+   end
+   return
+
+getstuff:
+      data_unchanged = 0
+   parse upper var keydata inline incol contents
+   if inline = num+1 then
+   do
+      if incol = 13 then
+         rr_tos = bool(contents)
+      else if incol = 28 then
+         rr_tof   = bool(contents)
+      else if incol = 42 then
+         trace = bool(contents)
+      else if incol = 57 then
+         divert = bool(contents)
+      else if incol = 69 then
+      do
+         if valid_fd(subword(contents,1,1) 'X X' subword(contents,2))then
+         do
+            d_name = strip(contents)
+            call msg 'Routine name "'strip(d_name)'" for debug I/O.'
+         end
+      end
+   end
+   else if inline = num+2 then
+   do
+      if incol = 19 then
+         profile_exec = strip(contents)
+      else if incol = 40 then
+         before_exec = strip(contents)
+      else if incol = 60 then
+         after_exec = strip(contents)
+      else
+         call msg 'Change with incol='incol'?'
+   end
+   else if inline = num+3 then
+   do
+      invocation = strip(contents)
+      if invocation = '' then
+         invocation = fname
+    end
+    else
+    do
+      inline = inline + current - attop
+      if inline > LAST then
+         LAST = inline
+      if (4 <= incol) & (incol <= namewid+4) then    /* It's a name */
+         sw_names.inline = translate(strip(contents))
+
+      else if (namewid+11 <= incol)&(incol <= namewid+17+valuewid) then
+         sw_value.inline = yesno(contents)
+      else
+         call emsg "Unexptected incol ("incol") detected!"
+    end
+    changes = 1
+    needrefresh = 1
+    return
+
+HALT:
+    rcode = rc
+    say 'SIGNAL HALT:'
+    sigline  = sigl
+    justify = 5
+
+is_an_exec:  procedure
+   parse upper arg fn .
+   if strip(fn) = '' then
+      return 0
+   else
+      return 1
+
+make_hash_data:
+   /*+-----------------------------------------------------------+*/
+   /*| Create hashdata file...                                   |*/
+   /*+-----------------------------------------------------------+*/
+   parse arg out_mode_type .
+   drop hashdata.
+   hashdata.1 = bool(rr_tos)'D_TOSCREEN'
+   hashdata.2 = bool(rr_tof)'D_TOFILE'
+   hashdata_count = 2                    /* Two because of above */
+   do i = 1 to LAST
+      if verify(sw_names.i," ") > 0 &,
+         verify(sw_value.i," ") > 0 then
+      do
+         sw_name_num = substr(sw_names.i,2,1)
+         if substr(sw_names.i,1,1) = 'D' ,
+            & sw_name_num >= 0 ,
+            & sw_name_num <= 9
+         then
+            sw_name = substr(sw_names.i,2)
+         else
+            sw_name = sw_names.i
+         hashdata_count = hashdata_count + 1
+         hashdata.hashdata_count = bool(sw_value.i)||sw_name
+      end
+   end
+   /*+-----------------------------------------------------------+*/
+   /*| Our internal version of hashdata table is done, now write |*/
+   /*| it out to a file.                                         |*/
+   /*+-----------------------------------------------------------+*/
+   call to_cmd 'ERASE' d_name 'HASHDATA A'
+   if debugging & out_mode_type = 3 then
+      out_mode_type = '1'
+   'EXECIO' hashdata_count 'DISKW' d_name,
+      'HASHDATA A'out_mode_type '0 F 80 ( FINIS STEM HASHDATA.'
+   return
+
+msg:  procedure
+   parse arg message
+   'COMMAND MSG' message
+   return
+
+nice_file:  procedure
+   parse upper arg fn .
+   if fn = '' | fn = '(NONE)' then
+      fn = ''
+   return left(fn,8)
+
+NOVALUE:
+    rcode = rc
+    say 'SIGNAL NOVALUE:  'errortext(rcode)
+    sigline  = sigl
+    justify = 7
+    signal BYEBYE
+
+output_setup:
+   if trace /= 0 & trace /= 1 then
+      trace = 0
+   if divert /= 0 & divert /= 1 then
+      divert = 0
+   if rr_tos /= 0 & rr_tos /= 1 then
+      rr_tos   = 1               /* Default output to screen = yes     */
+   if rr_tof /= 0 & rr_tof /= 1 then
+      rr_tof   = 0               /* Default output to file   = yes     */
+   if strip(d_name) = '' then
+      d_name = fname
+   if strip(invocation) = '' then
+      invocation = fname
+   return
+
+pfkey:
+   parse arg pfkey_num
+   if use_high_pfkeys then
+      pfkey_num = pfkey_num+12
+   return pfkeys.pfkey_num
+
+pfline1:
+   /*+-----------------------------------------------------------+*/
+   /*| Key labels are changed if user used high or low PF keys.  |*/
+   /*+-----------------------------------------------------------+*/
+   pfline = format_pf_label(1 pflabel.1)
+   do pfl1 = 2 to 6
+      pfline = pfline format_pf_label(pfl1 pflabel.pfl1)
+   end
+   return pfline
+
+pfline2:
+   /*+-----------------------------------------------------------+*/
+   /*| Things change pfline2 in addition to which PF keys the    |*/
+   /*| user is banging on.                                       |*/
+   /*+-----------------------------------------------------------+*/
+   if allblank = 1 then                   /* We're at the BOTTOM  */
+   do
+       seven = 1 ; eight = 2              /* That's UP and TOP    */
+   end
+
+   else if current = 1 then               /* We're at the TOP     */
+   do
+       seven = 2 ; eight = 1              /* That's BOTTOM & DOWN */
+   end
+
+   else                                   /* We're in the middle  */
+   do
+       seven = 1 ; eight = 1              /* That's UP and DOWN   */
+   end
+
+   if spid = 0 then                       /* We have no spool file*/
+      ten = 1
+
+   else                                   /* We have a spool file */
+      ten = 2
+
+   pfline = format_pf_label(7 pflabel.7.seven),
+      format_pf_label(8 pflabel.8.eight),
+      format_pf_label(9 pflabel.9),
+      format_pf_label(10 pflabel.10.ten),
+      format_pf_label(11 pflabel.11),
+      format_pf_label(12 pflabel.12)
+   return pfline
+
+pfset:
+   if debugging then
+      trace 'n'
+   do key = 1 to 24
+      'set pf'key' msg  *** I am dead.  Do a QUIT, QQUIT, or FILE *** '
+   end
+   'SET ENTER AFTER COMMAND CURSOR HOME PRIORITY 30'
+   return
+
+pf1:
+    call clear
+say 'REXXRUN actually keeps two copies of REXX variables in use;'
+say 'a copy on DASD in the file "fname REXXRUN fmode",'
+say 'and a copy stored in REXX variables.  The REXX versions are'
+say 'put on DASD only if a "FILE" or "SAVE" is done.  The DASD version'
+say 'can be brought into REXXRUN at anytime via "GET".'
+say ' '
+say 'PF keys are used as follows:'
+say ' '
+say 'PFKEY    NAME       USAGE'
+say '-------  ---------  -------------------------------------------'
+say ' 1 / 13  Help       To get this display;'
+say ' 2 / 14  Run        Sets the REXX variables to the values shown'
+say '                      and executes the module;'
+say ' 3 / 15  File       Stores all settings to DASD and exits REXXRUN;'
+say ' 4 / 16  Get        Replaces displayed settings with those on'
+say '                       on DASD--of course, these will be the same as'
+say '                       those displayed if a SAVE was done after'
+say '                       editing;'
+say ' 5 / 17  Save       Saves displayed settings onto DASD;'
+say ' 6 / 18  Retreive   RETRIVE key;'
+say ' 7 / 19  Window     For movement about the displayed settings, not'
+say '             Up        permitted when at top;'
+say ' 8 / 20  Window     For movement about the displayed settings, not'
+say '           Down        permitted when at bottom;'
+say ' 9 / 21  XoutFD     Fires up an XEDIT of the output file;'
+say '11 / 23  RUNC       Use Ken''s RUNC facility to examine traceback;'
+say '12 / 24  Quit       Issues a QUIT--dangerous because REXX copy of'
+say '                       settings can be lost if it is not SAVEed or'
+say '                       STOREd;'
+say ' '
+    call wait
+    call clear
+say 'THE COMMAND LINE'
+say ' '
+say 'Commands can be entered to CMS from the command line as typically'
+say 'All commands are addressed to CMS'
+say ' '
+say 'REXXRUN CALL FORMAT AND OPTIONS'
+    call to_cmd('EXEC REXXRUN ?')
+say ' '
+    call wait
+    call clear
+    return
+
+pf2:
+   /*+-----------------------------------------------------------+*/
+   /*| Run the routine--begin by check CP MSG setting:  if any   |*/
+   /*| kind of console spooling is to be done it must be set ON. |*/
+   /*+-----------------------------------------------------------+*/
+   if cannot_trace() then
+      return
+
+   call clear
+
+   call make_hash_data '3'
+
+   /*+-----------------------------------------------------------+*/
+   /*| Hashdata table is done.  Check to see if we will be doing |*/
+   /*| any kind of divert or trace operation...                  |*/
+   /*+-----------------------------------------------------------+*/
+   if divert then                         /* Start a +DIVERT?     */
+   do
+      if trace | trace_back_trace then    /* Wants both?!?        */
+         say '* REXXRUN:  +DIVERT overrides +TRACE setting.'
+      say '* REXXRUN:  Start:  +DIVERT' invocation
+      say runline()
+      'CP SPOOL CON TO * START NOTERM'
+   end
+   else if trace | trace_back_trace then
+   do
+      say '* REXXRUN:  Start:  +TRACE' invocation
+      'CP SPOOL CON TO * START'
+   end
+   else
+      say '* REXXRUN:  Start:  'invocation
+   say runline()                          /* If we are spooling   */
+   if trace | divert | trace_back_trace then /* the console, we can  */
+   do                                     /* name the spool file  */
+      'CP SPOOL CON CONT'                 /* after the first print*/
+      'CP CLOSE CON NA' substr(fname,1,8),
+         'RRTRACE'                        /* into it (in this case*/
+
+      'CP SPOOL CON NOCONT'               /* by "runline()".      */
+   end
+
+   /*+-----------------------------------------------------------+*/
+   /*| Run the BEFORE exec if there is one...                    |*/
+   /*+-----------------------------------------------------------+*/
+   if is_an_exec(before_exec) then
+   do
+      say runline('-')
+      say 'EXEC' before_exec
+      rcode = to_cmd('EXEC' before_exec)
+      if rcode /= 0 then
+      do
+         msg = nok'WARNING:  Before function "'before_exec'" returned',
+            'RC='rcode'.'
+         say msg
+         call msg msg
+      end
+      say runline('-')
+   end
+   /*+-----------------------------------------------------------+*/
+   /*| Now run it--start or check clocks immediately before and  |*/
+   /*| after.                                                    |*/
+   /*+-----------------------------------------------------------+*/
+   rtimestart = time()
+   'EXECIO * CP ( STEM TIMESTART STR INDICATE USER'
+   rcode = to_cmd(invocation)
+   'EXECIO * CP ( STEM TIMESTOP  STR INDICATE USER'
+   rtimestop  = time()
+   /*+-----------------------------------------------------------+*/
+   /*| Run is done, create status message with time calculations.|*/
+   /*+-----------------------------------------------------------+*/
+   say runline()
+   parse var TIMESTART2 'VTIME='vtimestart 'TTIME='ttimestart .
+   parse var TIMESTOP2  'VTIME='vtimestop  'TTIME='ttimestop  .
+   timemsg = '* REXXRUN/'fname':',
+      'RTIME='elapsed(rtimestart,rtimestop)';',
+      'VTIME='elapsed(vtimestart,vtimestop)';',
+      'TTIME='elapsed(ttimestart,ttimestop)';',
+      'RC='rcode'.'
+
+   say timemsg
+
+   /*+-----------------------------------------------------------+*/
+   /*| Run the AFTER exec if there is one...                     |*/
+   /*+-----------------------------------------------------------+*/
+   if is_an_exec(after_exec) then
+   do
+      say runline('-')
+      say 'EXEC' after_exec
+      rcode = to_cmd('EXEC' after_exec)
+      if rcode /= 0 then
+      do
+         msg = nok'WARNING:  After function "'after_exec'" returned',
+            'RC='rcode'.'
+         say msg
+         call msg msg
+      end
+      say runline('-')
+   end
+
+   if rr_tof then
+   do
+      call to_cmd 'MAKEBUF'
+      listrc = to_cmd('LISTFILE' d_name 'RROUT A ( ALL LIFO NOH')
+      if queued() > 0 then
+      do
+         'EXECIO 1 DISKW' d_name 'RROUT A ( FINIS STR' timemsg
+         parse pull . . . . . outfilesize .
+         filemsg = '* REXXRUN/'fname': Use' pfkey(9),
+            'to XEDIT' outfilesize,
+            'record "'strip(d_name)' RROUT" file.'
+      end
+      else
+         filemsg = '* REXXRUN/'fname': Output file',
+            '"'strip(d_name) 'RROUT" not found (RC='listrc').'
+      call to_cmd 'DROPBUF'
+   end
+
+   if divert | trace | trace_back_trace then
+   do
+      'EXECIO 1 CP ( VAR CP_SAID STR SPOOL CON STOP CLOSE TERM'
+      parse var cp_said . . spid .
+
+      'EXECIO * CP ( STEM CPSAID. STR QUERY RDR' spid
+      parse var CPSAID.2 . . . . records .
+      records = strip(records,'L','0')
+      if records = '' then
+         records = '?'
+
+      peekmsg = '* REXXRUN/'fname': Use' pfkey(10),
+         'to PEEK' records 'record'
+
+      if divert then
+      do
+         say runline()
+         peekmsg = peekmsg '+DIVERT spool file' spid'.'
+      end
+      else
+         peekmsg = peekmsg '+TRACE spool file' spid'.'
+      call setscreen
+   end
+   else
+      spid = 0
+
+   call to_cmd('BEEP')
+   call msg timemsg
+   if divert | trace | trace_back_trace then
+      call msg peekmsg
+   if rr_tof then
+      call msg filemsg
+/* if nohands then
+      return
+   call wait
+   call clear
+*/ return
+
+pf3:
+   if store(,) = 0 then
+      call pf12
+   else
+      call emsg 'Use' pfkey(12) 'to Quit.'
+   return
+
+pf4:
+    call get
+    call setscreen
+    call msg 'Settings retrieved from file "'input_file'".'
+    return
+
+pf5:
+   call store
+   call setscreen
+    return
+
+pf6:
+   if file_exists(d_name 'HASHDATA A') then
+      replaced_hd = 1
+   else
+      replaced_hd = 0
+   call make_hash_data '1'
+   if replaced_hd then
+      call msg 'Replaced "'strip(d_name) 'HASHDATA A".'
+   else
+      call msg 'Created "'strip(d_name) 'HASHDATA A".'
+   call msg 'Execution of routine via REXXRUN will erase "'strip(d_name),
+      'HASHDATA A".'
+   return
+
+pf7:
+   if current = 1 then
+      current = last
+   else
+      current = current - (lines%2) - 1
+   if current < 1 then
+      current = 1
+   call setscreen
+   return
+
+pf8:
+   if allblank = 1 then
+      current = 1
+   else
+      current = current + (lines%2) - 1
+   call setscreen
+   return
+
+pf9:
+   call to_cmd 'XEDIT' d_name 'RROUT A'
+   call clear
+    return
+
+pf10:
+   if spid = 0 then
+      call unpfkey
+   else
+   do
+      rcode = to_cmd('EXEC PEEK' spid '( FOR *')
+      if rcode /= 0 then
+      do
+         spid = 0
+         call setscreen
+      end
+   end
+   return
+
+pf11:
+   trace_back_trace = 1
+   if cannot_trace() = 0 then
+   do
+      call pf2
+      push 'MACRO TRACEBAK' fname 'LOADMAP'
+      call pf10
+   end
+   trace_back_trace = 0
+   return
+
+pf12:
+   if quit_verify | data_unchanged then
+   do
+      call clear
+      exit to_xedit('QQUIT')
+   end
+   quit_verify = 1
+   call emsg 'Data was changed--press PF12 or PF24',
+      'to QUIT, anything else to continue.'
+   return
+
+readable:  procedure
+   signal off ERROR
+   parse arg fd
+   address command 'STATE' fd
+   if rc = 0 then
+      return 1
+   else
+      return 0
+
+riteable:  procedure
+   signal off ERROR
+   parse arg fd
+   address command 'STATEW' fd
+   if rc = 0 then
+      return 1
+   else
+      return 0
+
+runline:
+   parse arg runchar
+   if runchar = '' then
+      runchar = '='
+   return copies(runchar,lscreen.2)
+
+secondize:  procedure
+   parse arg hrs':'mins':'secs
+   if secs = '' then
+   do
+      secs = mins
+      mins = hrs
+      hrs  = 0
+   end
+   return hrs*360+mins*60+secs
+
+setfile:
+   parse upper arg name_in type_in mode_in extra
+   if mode_in = '' then do
+      mode_in = 'A'
+      if type_in = '' then
+         type_in = 'RROUT'
+   end
+   if valid_fd(name_in type_in mode_in extra) = 0 then
+         return
+   end
+   unwriteable = to_cmd('STATEW * *' mode_in)
+   if unwriteable /= 0 then do
+      call emsg 'Cannot write on "'mode_in'" disk.  Using "A" instead.'
+      mode_in = 'A'
+   end
+   noexist = to_cmd('STATEW 'name_in' 'type_in' 'mode_in)
+   if noexist = 0 then do
+      call emsg '"'name_in' 'type_in' 'mode_in'" exists and will be',
+         'overwritten.'
+   end
+   rr_ofn = name_in
+   rr_oft = type_in
+   rr_ofm = mode_in
+   return
+
+setscreen:
+   if debugging then
+      trace off
+   'set msgmode off'
+   'set reserved 1 blue high 'center(topline,lscreen.2)
+   'set reserved 2 blue noh 'labeline
+   attop = 3
+   lines = lscreen.1 - attop - 3 - 7 /* Total - @top - @bottom - fudge */
+   allblank = 1
+   do num = attop to lines+attop-1
+       here = current + num - attop
+       if verify(sw_names.here," ") > 0 then
+       do
+            name = sw_names.here
+            allblank = 0
+       end
+       else
+            name = ' '
+       if verify(sw_value.here," ") > 0 then
+       do
+            value = sw_value.here
+            allblank = 0
+       end
+       else
+            value = ' '
+       value = left(value,valuewid)
+       name = right(name,namewid)
+   line=pn||right(here,4,' ')':'pn'('nh||name||pn') = ('nh||value||pn')'
+      'set reserved 'num' blue noh 'line
+   end
+   'set reserved 'num  ' blue noh '
+/*+--------------------------------------------------------------+*/
+/*|  The following lines establish the PPPMAC output paramaters  |*/
+/*+--------------------------------------------------------------+*/
+   d_name = left(d_name,8)
+   line = 'To Stdout=('nh||rr_tos||pn')',
+      ' To File=('nh||rr_tof||pn')',
+      ' +Trace=('nh||trace||pn')',
+      ' +Divert=('nh||divert||pn')',
+      ' Name=('nh||d_name||pn')'
+   'set reserved 'num+1' blue noh 'line
+/*+--------------------------------------------------------------+*/
+/*|  End  of output establish                                    |*/
+/*+--------------------------------------------------------------+*/
+/*+--------------------------------------------------------------+*/
+/*|  The following lines establish the profile/before/after EXECs|*/
+/*+--------------------------------------------------------------+*/
+   profile_exec = nice_file(profile_exec)
+   before_exec = nice_file(before_exec)
+   after_exec = nice_file(after_exec)
+   line = 'EXECs:  Profile=('nh||profile_exec||pn')',
+      ' Before=('nh||before_exec||pn')',
+      ' After=('nh||after_exec||pn')'
+   'set reserved 'num+2' blue noh 'line
+/*+--------------------------------------------------------------+*/
+/*|  End special exec establish                                  |*/
+/*+--------------------------------------------------------------+*/
+/*+--------------------------------------------------------------+*/
+/*|  The following lines establish the MODULE cmd line args      |*/
+/*+--------------------------------------------------------------+*/
+   inv_size = lscreen.2 - 12
+   line = 'Invocation: ('nh||left(strip(invocation,'L'),inv_size)||pn')'
+   'set reserved 'num+3' blue noh 'line
+/*+--------------------------------------------------------------+*/
+/*|  End  of args establishment                                  |*/
+/*+--------------------------------------------------------------+*/
+   'set reserved 'num+4' blue noh'
+   'set reserved 'num+5' blue noh' pfline1()
+   'set reserved' num+6 'blue noh' pfline2()
+   'set reserved 'num+7' blue noh'
+   'set msgmode on long'
+   'set tofeof off'
+   needrefresh = 0
+   return
+
+store:
+   if data_unchanged then
+   do
+      call msg 'Data was not changed--no SAVE done.'
+      return 0
+   end
+
+   do i = 1 to last
+      data.i = sw_names.i" = "sw_value.i
+   end
+
+   last_and_one = last + 1
+   call output_setup
+   int_data = 'REXXRUN_INTERNAL_DATA = 'trace','divert','rr_tos','
+   int_data = int_data||rr_tof','left(d_name,8)','invocation','
+   int_data = int_data||profile_exec','before_exec','after_exec
+   data.last_and_one = int_data
+
+   rcode = fileput( last_and_one 'DATA' filefind(fname 'REXXRUN *'),
+      fname 'REXXRUN A')
+
+   if rcode = 0 then
+      data_unchanged = 1
+   return rcode
+
+SYNTAX:
+    rcode = rc
+    say 'SIGNAL SYNTAX:  'errortext(rcode)
+    sigline  = sigl
+    justify = 7
+    signal BYEBYE
+
+to_cmd:
+   parse arg param
+   signal off ERROR
+   address command param
+   return rc
+
+to_cms:
+   parse arg param
+   signal off ERROR
+   address cms param
+   return rc
+
+to_xedit:
+   parse arg param
+   signal off ERROR
+   ''param
+   return rc
+
+unpfkey:
+    'emsg DMSXSC657E Undefined PFkey/PAkey (PF'real_pfkey_num')'
+    return
+
+valid_fd: procedure
+   fd_chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890#$%+-_'
+   parse arg fn ft fm extra
+   if extra /= '' then
+      problem = 'Extra characters "'extra'" found'
+
+   else if length(fn) > 8 then
+      problem = 'Name too long'
+   else if fn = '' then
+      problem = 'Name missing'
+   else if verify(fn,fd_chars) > 0 then
+      problem = 'Bad character',
+         '"'substr(fn,verify(fn,fd_chars),1)'" in name'
+
+   else if length(ft) > 8 then
+      problem = 'Type too long'
+   else if ft = '' then
+      problem = 'Type missing'
+   else if verify(ft,fd_chars) > 0 then
+      problem = 'Bad character',
+         '"'substr(ft,verify(ft,fd_chars,1)'" in type'
+
+   else if length(fm) > 1 then
+      problem = 'Mode too long'
+   else if fm = '' then
+      problem = 'Mode missing'
+   else if verify(fm,'ABCDEFGHIJKLMNOPQRSTUVWXYZ') > 0 then
+      problem = 'Bad character',
+        '"'substr(fm,verify(fm,'ABCDEFGHIJKLMNOPQRSTUVXYZ'),1)'" in mode'
+
+   else
+      return 1
+
+   call emsg 'Invalid file descriptor rejected:  'problem'.'
+   return 0
+
+wait:
+    if debugging then
+         trace off
+   arg line
+   call to_cmd('MAKEBUF')
+   say line
+   Say "REXXRUN:  Press ENTER to continue."
+   Pull junk
+   call to_cmd('DROPBUF')
+   return
+
+XCMD:
+/* if bad$command = keydata then do                   */
+/*    emsg '*** Awwww, give it up already! ***'       */
+/*    return                                          */
+/* end                                                */
+   qsize = queued()
+   do line = 1 to qsize
+      parse pull item.line
+   end
+/*+--------------------------------------------------------------+*/
+/*| In this here section we contrive to send all commands to CMS.|*/
+/*| If the user tries an XEDIT command we play dumb and send it  |*/
+/*| to CMS anyway.  The user might prefix the command with "CMS",|*/
+/*| so we strip that off because we send it to CMS--the user     |*/
+/*| thought XEDIT was doing it.  Commands prefixed with "\" get  |*/
+/*| the "\" stripped off and are sent directly to XEDIT, so that |*/
+/*| I can play with things.                                      |*/
+/*|                                                              |*/
+/*| In any case, "rcode" is always set for furter processing.    |*/
+/*+--------------------------------------------------------------+*/
+   if substr(keydata,1,1) = '\' then do /*secret escape for 4 cmds*/
+      keydata = substr(keydata,2)
+      ''keydata ; rcode = rc
+   end
+   else if translate(word(keydata,1)) = 'CMS' then do
+      if strip(word(Keydata,2),'B') = '' then do
+         rcode = to_cmd('SUBSET')
+      end
+      else do
+         rcode = to_cms(subword(keydata,2))
+      end
+   end
+   else do
+         rcode = to_cms(keydata)
+   end
+/*+--------------------------------------------------------------+*/
+/*| OK, now we have "rcode" from the command.                    |*/
+/*+--------------------------------------------------------------+*/
+   if rcode /= 0 then do
+      call emsg 'RC='rcode'.'
+      item.1 = 'ETK CURSOR CMDLINE 'length(keydata)+1' P 40'
+      'COMMAND CMSG' keydata            /* get ready to repeat */
+      bad$command = keydata
+   end
+   else do
+      bad$command = ''
+      item.1 = 'ETK CURSOR CMDLINE 1 P 40' /* get read for anudder*/
+   end
+   do line = 1 to qsize
+      push item.line
+   end
+    return
+
+yesno:
+   parse upper arg yn
+   if yn = ' ' | yn = ' ' then
+      return ' '
+   else
+      return bool(yn)
+

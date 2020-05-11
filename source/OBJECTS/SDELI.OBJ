@@ -1,0 +1,23 @@
+SDELI       type=50     isv=0
+;
+;
+;           System Deletion Index                      JF 03-24-89
+;
+;           The KEY of each entry in the deletion index is the object
+;           type, which is a 1/2 word, and the OID of the object to be
+;           deleted.  Items that appear in this index are only deleted
+;           from the object level, not the data base.
+;
+;           The data of each deletion entry is the date and time of
+;           deletion and the OID of the user or process that requested
+;           the deletion.
+;
+SDELI   type=HSEG
+{
+    INDEX     type=INDEX
+    {
+         TYPE+OID      type=STR len=10 KEY
+         DATETIME      type=D/T
+         WHO           type=OID
+    }
+}

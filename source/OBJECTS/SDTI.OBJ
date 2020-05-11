@@ -1,0 +1,15 @@
+SDTI     type=42     isv=0
+;
+;
+;        System Date and Time OID Index                 JF 06-23-88
+;
+;
+;
+          SDTI                       type=HSEG
+          {
+            INDEX                          type=NDX
+            {
+               DATE_TIME                      type=D/T
+               OID                            type=OID
+            }
+          }

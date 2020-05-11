@@ -1,0 +1,137 @@
+/*this profile is called to insert a subsystem entry in the file*/
+TRACE 'off'
+'EXTRACT/LSCREEN/'
+call setup
+'set shadow off'
+'set ctlchar ! escape'
+'set ctlchar \ protect noh'
+'set ctlchar @ noprotect high'
+push '!\ !@'
+pull pn nh
+address cms 'globalv stack flag'
+parse pull flag
+numb=''
+t='PFKs            3Quit                7Prev        8Next'
+'set reserved 'lscreen.1-2' blue high 't
+t='======> Error Code Manager <========> Error code Manager <======='
+'set reserved '1' blue high 't
+do forever
+     numb=LEFT(numb,6)
+     t='              SPECIFIC SUBSYSTEM NUMBER:'||nh||numb||pn
+     'SET RESERVED 'lscreen.1-5' BLUE NOH 't
+     'CURSOR SCREEN 'lscreen.1-5 42
+     call altset
+     datline=STRIP(result)
+     if datline='' then do
+                    call setmenu
+                    'all'
+                    end
+     if (flag=1) & (datline='quit') then do
+         'set reserved 'lscreen.1-4' blue noh'
+          address cms 'globalv set flag 0'
+          return
+          end
+     if (datatype(datline)='NUM') & (length(datline)=2) then do
+          ecode=strip(datline)
+          leave
+          end
+     else do
+      e='invalid subsystem number'
+     call procerror
+     end
+end/*of forever*/
+call setmenu
+'all/ ('||ecode'/'
+if rc^=0 then do
+          i=1
+          do lscreen.1-6
+               'set reserved 'i' blue noh'
+               i=i+1
+          end
+          'set scope display'
+          'set display 0 1'
+          'set shadow on'
+          'set select 0'
+end
+'top'
+'locate/ ('||ecode'/'
+if rc=0 then do
+     'extract /curline/'
+     status=strip(word(curline.3,1))
+     address cms 'globalv set status 'status
+     address cms 'globalv set subdat 'ecode
+     e='This subsystem exists'
+     call procerror
+     return
+     end/*of if locate*/
+          text=''
+          e='enter text for subsystem 'ecode
+          call procerror
+          call newsub
+          datline=strip(result)
+          if datline = 'quit' then do
+               address cms 'globalv set flag 0'
+               return
+               end
+          text=datline
+          status=''
+          call readstatus
+          if datline = 'quit' then do
+               address cms 'globalv set flag 0'
+               return
+               end
+          status=datline
+          address cms 'globalv set status 'status
+          erline=status    '('||ecode||')'     text
+          call subinsert
+          return
+subinsert:
+'bottom'
+if rc=1 then do/*no record in the file*/
+          'input 'erline
+          address cms 'globalv set subdat 'ecode/*subsystem no*/
+          e='the entry has been added in the system'
+          call procerror
+          return
+          end
+'extract /curline/'
+temp=delstr(delstr(strip(word(curline.3,2)),1,1),3,1)
+if ecode>temp then 'input 'erline
+else do
+     'top'
+     do until ecode<delstr(delstr(strip(word(curline.3,2)),1,1),3,1)
+          'next'
+          'extract /curline/'
+     end
+     'up'
+     'input 'erline
+     end
+address cms 'globalv set subdat 'ecode/*contains subsystem no*/
+e='the entry has been added'
+call procerror
+return
+setmenu:
+i=2
+DO LSCREEN.1-7
+     'set reserved 'i' off'
+     i=i+1
+     end
+return
+readstatus:
+     status=left(status,1)
+     do
+          t='       Will subsystem contains category?(y/n)'||nh||status||pn
+          'set reserved 'lscreen.1-4' blue noh 't
+          'cursor screen 'lscreen.1-4 47
+          call altset
+          datline=strip(result)
+          if datline ='quit' then return
+          if datline='' then datline='y'
+     end
+     'set reserved 'lscreen.1-4' blue noh'
+     return
+procerror:
+'set msgmode on long'
+'emsg 'e
+'set msgmode off'
+return

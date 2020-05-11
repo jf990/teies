@@ -1,0 +1,19 @@
+SOIDI              type=38    isv=0
+;
+;   System Object ID Index object definition.     JF 04-18-89
+;
+;   NOTE:  Some hardcoded areas of the system *depend* on the exact
+;          component ordering described here.  DO NOT CHANGE IT!
+;          See the SOIDI level routines in the object level.
+;
+;
+           SOIDI                           type=HSEG
+           {
+             INDEX                           type=INDEX
+             {
+                OID                             type=OID  key
+                LFD                             type=HWRD
+                GOID                            type=INT
+                TYPE                            type=HWRD
+             }
+           }

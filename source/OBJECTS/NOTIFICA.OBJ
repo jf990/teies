@@ -1,0 +1,99 @@
+NOTIFICATION        type=7   isv=17
+;
+;  Definition of a notification object.
+;
+                %LINKS  type=ROOT
+                {
+
+                   ROOT                                type=OID
+;
+;                            The Root is the object that has a pointer to
+;                            this one.  For example, a conference comment
+;                            will have a Root that is the OID of its
+;                            Conference; a piece of Group mail will have
+;                            a root of the Group.
+;
+                   OWNER                               type=OID
+;
+;                            True owner of the object.
+;
+                   AUTHOR                              type=OID
+;
+;                            OID of the User who created the object.
+;
+                   LAST_EDITOR                         type=OID
+;
+;                            OID of the User who last modified the
+;                            object.
+;
+                   MODIFIER                            type=OID
+                   ACCESS_COUNT                        type=INT
+                   LINK_COUNT                          type=INT
+                   REVERSECOUNT                        type=INT
+                   ACCESS   type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+;
+;                            Links is an Array of segments that contain
+;                            all the forward pointers to Object this
+;                            object is linked to.  These array segments
+;                            are handled specially.  The first OID entry
+;                            is 2 integers, the first contains the total
+;                            number of OIDs in this structure, the second
+;                            is the total number of array segments.  Each
+;                            segment is an array of OIDs.  Each entry in
+;                            the array has the object type to avoid
+;                            opening the target object just to check if
+;                            it is the desired type.  This creates redun-
+;                            dancy that is not desired.
+;
+                   LINKS  type=INDEX
+                   {
+                      OID                              type=OID   Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+;
+;                            Reverse links are similar to Links only
+;                            these are objects that point to this one.
+;                            Each OID here has this OID in its LINKS
+;                            array.
+;
+                   REVERSE_LINKS   type=INDEX
+                   {
+                      OID                              type=OID  Key
+                      OBJECT_TYPE                      type=HWRD
+                      LINK_TYPE                        type=HWRD
+                   }
+               }
+               %SYSTEM   type=ROOT
+               {
+                   AUTHOR_SIG                    type=HWRD
+                   MODIFY_SIG                    type=HWRD
+                   TYPE                          type=HWRD
+                   OID                           type=OID
+                   CREATE_DATE                   type=D/T
+                   MODIFY_DATE                   type=D/T
+                   LASTACC_DATE                  type=D/T
+                   GRANULARITY                   type=D/T
+               }
+               NOTIFICATION         type=ROOT
+               {
+                  TYPE                     type=INT
+                  STATUS                   type=INT
+                  INC_AUTHOR               type=ISV
+                  EXPIRATION               type=D/T
+                  TO                       type=STR len=250
+                  ASSOCIATED               type=STR len=79
+                  AUTHOR                   type=str len=132
+                  CATEGORY                 type=INT
+                  CONTENTS                 type=INDEX
+                  {
+                     LINE_NUM               type=INT KEY
+                     BSE                    type=INT
+                     TEXT                   type=str Len=255
+                  }
+               }

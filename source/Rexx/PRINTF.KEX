@@ -1,0 +1,26 @@
+/* this routine is used to print out a specified no of lines in xedit enviornme
+nt*/
+trace off
+parse arg frec lrec
+'extract/line/'
+store=line.1
+if ((frec='') & (lrec='')) then do
+          'bottom'
+          'extract/line/'
+          numrec=line.1
+          'top'
+          end
+else do
+    numrec =lrec-frec
+    ':'frec
+end
+do numrec
+     'extract/curline/'
+     'next'
+     address cms 'EXECIO 1 DISKW TEMP TEMP A (string 'curline.3
+end
+address cms 'finis'
+address cms 'pr temp temp a'
+address cms 'erase temp temp a'
+'top'
+':'store

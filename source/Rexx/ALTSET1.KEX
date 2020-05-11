@@ -1,0 +1,78 @@
+/*this routine reads a value and returns the result*/
+TRACE 'OFF'
+     'cms desbuf'
+     'read all tag'
+     parse pull sline
+     queue sline
+    sentries
+    numline=rc
+    datline=''
+    do numline
+          pfkey=''
+          parse pull sline
+          keydef=WORD(sline,1)
+          SELECT;
+               when keydef='ETK' then 'cursor cmdline'
+               when keydef='PAK' then 'emsg invalid keys'
+               when keydef='PFK' then do
+                                        pfkey=WORD(sline,2)
+                                        if pfkey>12 then pfkey=pfkey-12
+                                        call procpf
+                                       end
+               when keydef='RES' then
+                                     datline=STRIP(subword(sline,4))
+               when keydef='CMD' then do
+                                        cmdl=STRIP(SUBWORD(sline,2))
+                                        if cmdl='' then call procpf
+                                        else do
+                                         if cmdl^='QUIT' then call cmspass
+                                             else do
+                                                  pfkey=3
+                                                  call procpf
+                                                  end
+                                        end
+                                   end
+               otherwise nop
+               end/*of select*/
+          end/*of numline*/
+return datline
+procpf:
+if pfkey^='' then do
+               pf='pf'||pfkey
+               interpret 'call 'pf
+               end
+return
+pf1:
+pf2:
+pf4:
+pf5:
+pf6:
+pf9:
+pf10:
+pf11:
+pf12:
+e='These keys are not valid'
+call procerror
+return
+procerror:
+'SET MSGM ON LONG'
+'emsg ' e
+return
+pf3:
+datline='quit'
+return
+pf7:
+datline='BACKWARD'
+return
+pf8:
+datline='FORWARD'
+return
+cmspass:
+IF SUBSTR(cmdl,1,1) = '\' THEN DO
+   cmdl=SUBSTR(cmdl,2)
+   ''cmdl
+END
+ELSE
+    'CMS' cmdl
+IF RC=0 THEN cmdl=" "
+RETURN
